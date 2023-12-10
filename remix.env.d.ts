@@ -6,3 +6,9 @@ declare module "__STATIC_CONTENT_MANIFEST" {
     const manifest: string;
     export default manifest;
 }
+
+declare module "@remix-run/server-runtime" {
+    export interface AppLoadContext {
+        readonly env: { readonly INFO_STORE: D1Database };
+    }
+}

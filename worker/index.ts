@@ -12,7 +12,7 @@ if (process.env.NODE_ENV === "development") {
     broadcastDevReady(build);
 }
 
-type FetchEnv = { readonly __STATIC_CONTENT: Fetcher };
+type FetchEnv = { readonly __STATIC_CONTENT: Fetcher; readonly INFO_STORE: D1Database };
 
 export default {
     async fetch(req: Request, env: FetchEnv, ctx: ExecutionContext): Promise<Response> {
