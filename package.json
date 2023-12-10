@@ -1,0 +1,36 @@
+{
+  "name": "ct2-soundscape",
+  "type": "module",
+  "scripts": {
+    "build": "remix build",
+    "deploy": "wrangler deploy",
+    "dev": "remix dev --manual -c \"pnpm dev:wrangler\"",
+    "dev:wrangler": "wrangler dev --live-reload",
+    "local-stg": "cross-env NODE_ENV=production remix build && pnpm dev:wrangler"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@cloudflare/kv-asset-handler": "^0.3.0",
+    "@remix-run/cloudflare": "^2.3.1",
+    "@remix-run/node": "^2.3.1",
+    "@remix-run/react": "^2.3.1",
+    "@remix-run/serve": "^2.3.1",
+    "isbot": "^3.7.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "typescript": "^5.3.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20231121.0",
+    "@remix-run/dev": "^2.3.1",
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "cross-env": "^7.0.3",
+    "eslint": "^8.55.0",
+    "miniflare": "^3.20231030.3",
+    "prettier": "^3.1.0",
+    "wrangler": "^3.19.0"
+  }
+}
