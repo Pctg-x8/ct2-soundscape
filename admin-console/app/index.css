@@ -1,0 +1,32 @@
+@import-normalize;
+
+* {
+    font-size: 1rem;
+    font-weight: normal;
+}
+
+:root {
+    font-family: Inter, system-ui, sans-serif;
+    /* fix for chrome */
+    font-feature-settings:
+        "liga" 1,
+        "calt" 1;
+}
+
+@supports (font-variation-settings: normal) {
+    :root {
+        font-family: InterVariable, system-ui, sans-serif;
+    }
+}
+
+label,
+h1 {
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body {
+    font-size: 12pt;
+    background: #f0f4ff;
+}

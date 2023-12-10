@@ -1,0 +1,75 @@
+#UploadForm {
+    margin: 2rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 0.8em;
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+
+    & > h1 {
+        text-align: center;
+        font-size: 1.25rem;
+        &::after {
+            margin-top: 0.8rem;
+            display: block;
+            content: "";
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(
+                to right,
+                rgb(160 160 160 / 0%) 0%,
+                rgb(160 160 160 / 100%) 25%,
+                rgb(160 160 160 / 100%) 75%,
+                rgb(160 160 160 / 0%) 100%
+            );
+        }
+    }
+
+    & > form {
+        padding: 1.6rem 2rem;
+        padding-bottom: 0.8rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.2em;
+
+        & section {
+            display: flex;
+            flex-direction: column;
+
+            & > label,
+            & > p.labelLike {
+                font-size: 80%;
+                color: #999;
+            }
+
+            input {
+                outline: none;
+                border: none;
+                border-bottom: 2px solid #309;
+                padding: 0.4rem;
+
+                &:invalid {
+                    border-color: red;
+                    background-color: rgb(255 0 0 / 10%);
+                }
+            }
+
+            textarea {
+                outline: none;
+                border: none;
+                border-bottom: 2px solid #309;
+                padding: 0.4rem;
+                resize: vertical;
+                min-height: calc(1rem + 0.6rem);
+            }
+
+            &.buttons {
+                display: flex;
+                flex-direction: row;
+                gap: 1.6rem;
+                justify-content: center;
+            }
+        }
+    }
+}
