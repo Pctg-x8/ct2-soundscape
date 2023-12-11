@@ -1,0 +1,23 @@
+#EntryTable {
+    width: calc(100% - 2rem);
+    border-collapse: collapse;
+    margin: 1rem;
+
+    td,
+    th {
+        padding: 0.2rem;
+    }
+
+    th {
+        font-weight: bolder;
+        background: #eee;
+    }
+
+    tr:nth-child(2n) {
+        background: rgb(0 128 255 / 5%);
+    }
+
+    td.num {
+        text-align: right;
+    }
+}
