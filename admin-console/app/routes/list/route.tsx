@@ -120,7 +120,7 @@ export default function Page() {
             <dialog ref={editDialogRef}>
                 <h1>Edit #{editing.id}</h1>
                 <fs.Form method="post" encType="multipart/form-data" className="contentForm">
-                    <fieldset disabled={fs.state === "submitting"}>
+                    <fieldset disabled={fs.state === "submitting"} key={editing.id}>
                         <section>
                             <label htmlFor="title">タイトル</label>
                             <input id="title" name="title" defaultValue={editing.title} required />
