@@ -1,6 +1,6 @@
 import { cssBundleHref } from "@remix-run/css-bundle";
 import type { LinksFunction } from "@remix-run/cloudflare";
-import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "@remix-run/react";
+import { Link, Links, Meta, Outlet, Scripts, ScrollRestoration } from "@remix-run/react";
 
 import styles from "./index.css";
 import formStyles from "./form.css";
@@ -23,6 +23,16 @@ export default function App() {
                 <Links />
             </head>
             <body>
+                <nav>
+                    <ul>
+                        <li>
+                            <Link to="/list">登録済み一覧</Link>
+                        </li>
+                        <li>
+                            <Link to="/upload">ファイルアップロード</Link>
+                        </li>
+                    </ul>
+                </nav>
                 <Outlet />
                 <ScrollRestoration />
                 <Scripts />
