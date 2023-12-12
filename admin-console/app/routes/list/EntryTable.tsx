@@ -8,6 +8,7 @@ export type EntryTableRow = {
     readonly month: number;
     readonly day: number;
     readonly comment: string;
+    readonly dlCount: number;
     readonly downloadAllowed: boolean;
 };
 
@@ -36,6 +37,7 @@ export default function EntryTable({
                     <th>ID</th>
                     <th>タイトル</th>
                     <th>制作日</th>
+                    <th>DLCount</th>
                     <th>Flags</th>
                     <th></th>
                 </tr>
@@ -45,11 +47,12 @@ export default function EntryTable({
                     <tr key={x.id}>
                         <td className="num">{x.id}</td>
                         <td>{x.title}</td>
-                        <td>
+                        <td className="center">
                             {x.year.toString()}/{x.month.toString().padStart(2, "0")}/
                             {x.day.toString().padStart(2, "0")}
                         </td>
-                        <td>{x.downloadAllowed ? "DL可" : ""}</td>
+                        <td className="num">{x.dlCount}</td>
+                        <td className="center">{x.downloadAllowed ? "DL可" : ""}</td>
                         <td className="actionButtons">
                             <f.Form method="post" onSubmit={onSubmit}>
                                 <button type="submit" name="deleteAction" value={x.id}>

@@ -21,6 +21,10 @@
         text-align: right;
     }
 
+    td.center {
+        text-align: center;
+    }
+
     td.actionButtons {
         button + button {
             margin-left: 8px;

@@ -26,6 +26,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
             month: x.dateJst.getMonth() + 1,
             day: x.dateJst.getDate(),
             comment: x.comment,
+            dlCount: x.downloadCount,
             downloadAllowed: x.flags.downloadAllowed,
         }))
     );
@@ -87,6 +88,7 @@ export default function Page() {
         month: 0,
         day: 0,
         comment: "",
+        dlCount: 0,
         downloadAllowed: false,
     });
     const editDialogRef = useRef<HTMLDialogElement>(null);
