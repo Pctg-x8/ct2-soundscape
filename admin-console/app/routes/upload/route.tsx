@@ -24,7 +24,9 @@ export async function action({ request, context: { env } }: ActionFunctionArgs) 
             title: String(body.get("title")),
             comment: String(body.get("comment")),
             dateJst: new Date(String(body.get("time"))),
-            flags: new ContentFlags(),
+            flags: ContentFlags.fromBooleans({
+                allowDownload: body.get("enableDownloads") === "on",
+            }),
         },
         file
     );

@@ -1,14 +1,26 @@
 import { type ActionFunctionArgs, defer, type LoaderFunctionArgs, type MetaDescriptor } from "@remix-run/cloudflare";
-import { Await, useLoaderData } from "@remix-run/react";
+import { Await, type ShouldRevalidateFunctionArgs, useLoaderData } from "@remix-run/react";
 import { Suspense } from "react";
 import "./style.css";
-import EntryTable from "./EntryTable";
+import EntryTable, { type EntryTableRow } from "./EntryTable";
 import { CloudflareContentRepository } from "soundscape-shared/src/content";
 
 export const meta: MetaDescriptor[] = [{ title: "Content List - Soundscape (Admin Console)" }];
 
 export async function loader({ context }: LoaderFunctionArgs) {
-    const items = new CloudflareContentRepository(context.env.INFO_STORE, context.env.OBJECT_STORE).allDetails;
+    const contentRepo = new CloudflareContentRepository(context.env.INFO_STORE, context.env.OBJECT_STORE);
+
+    const items: Promise<EntryTableRow[]> = contentRepo.allDetails.then((xs) =>
+        xs.map((x) => ({
+            id: x.id,
+            title: x.title,
+            year: x.dateJst.getFullYear(),
+            // Note: returned as 0-based(Jan = 0)
+            month: x.dateJst.getMonth() + 1,
+            day: x.dateJst.getDate(),
+            downloadAllowed: x.flags.downloadAllowed,
+        }))
+    );
 
     return defer({ items });
 }
@@ -20,7 +32,11 @@ export async function action({ request, context }: ActionFunctionArgs) {
         Number(values.get("deleteAction"))
     );
 
-    return null;
+    return true;
+}
+
+export function shouldRevalidate({ actionResult, defaultShouldRevalidate }: ShouldRevalidateFunctionArgs) {
+    return actionResult ? true : defaultShouldRevalidate;
 }
 
 export default function Page() {

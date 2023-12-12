@@ -1,9 +1,16 @@
 import { Form } from "@remix-run/react";
-import type { SerializeFrom } from "@remix-run/cloudflare";
 import { useState, type FormEvent } from "react";
-import type { Details } from "soundscape-shared/src/schema";
 
-export default function EntryTable({ initItems }: { readonly initItems: SerializeFrom<Details>[] }) {
+export type EntryTableRow = {
+    readonly id: number;
+    readonly title: string;
+    readonly year: number;
+    readonly month: number;
+    readonly day: number;
+    readonly downloadAllowed: boolean;
+};
+
+export default function EntryTable({ initItems }: { readonly initItems: EntryTableRow[] }) {
     const [items, setItems] = useState(initItems);
 
     const onSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -23,6 +30,7 @@ export default function EntryTable({ initItems }: { readonly initItems: Serializ
                     <th>ID</th>
                     <th>タイトル</th>
                     <th>制作日</th>
+                    <th>Flags</th>
                     <th></th>
                 </tr>
             </thead>
@@ -32,12 +40,10 @@ export default function EntryTable({ initItems }: { readonly initItems: Serializ
                         <td className="num">{x.id}</td>
                         <td>{x.title}</td>
                         <td>
-                            {new Date(x.dateJst).toLocaleDateString("ja-jp", {
-                                year: "numeric",
-                                month: "2-digit",
-                                day: "2-digit",
-                            })}
+                            {x.year.toString()}/{x.month.toString().padStart(2, "0")}/
+                            {x.day.toString().padStart(2, "0")}
                         </td>
+                        <td>{x.downloadAllowed ? "DL可" : ""}</td>
                         <td>
                             <Form method="post" replace onSubmit={onSubmit}>
                                 <button type="submit" name="deleteAction" value={x.id}>
