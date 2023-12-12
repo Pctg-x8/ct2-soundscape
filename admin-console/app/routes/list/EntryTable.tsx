@@ -1,7 +1,7 @@
 import { Form } from "@remix-run/react";
 import type { SerializeFrom } from "@remix-run/cloudflare";
 import { useState, type FormEvent } from "react";
-import type { Details } from "../../../../src/schema";
+import type { Details } from "soundscape-shared/src/schema";
 
 export default function EntryTable({ initItems }: { readonly initItems: SerializeFrom<Details>[] }) {
     const [items, setItems] = useState(initItems);

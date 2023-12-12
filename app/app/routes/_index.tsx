@@ -1,12 +1,10 @@
-import { LoaderFunctionArgs, defer } from "@remix-run/cloudflare";
+import { type LoaderFunctionArgs, defer } from "@remix-run/cloudflare";
 import { Await, useLoaderData } from "@remix-run/react";
-import { drizzle } from "drizzle-orm/d1";
 import { Suspense } from "react";
-import { details } from "src/schema";
+import { CloudflareContentRepository } from "soundscape-shared/src/content";
 
 export function loader({ context: { env } }: LoaderFunctionArgs) {
-    const db = drizzle(env.INFO_STORE);
-    const ids = db.select({ id: details.id }).from(details).all();
+    const ids = new CloudflareContentRepository(env.INFO_STORE, env.OBJECT_STORE).allDetails;
 
     return defer({ ids });
 }

@@ -1,0 +1,22 @@
+{
+  "name": "soundscape-shared",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "db:generate": "drizzle-kit generate:sqlite",
+    "db:migrate-local": "wrangler d1 migrations apply soundscape --local --persist-to=../.wrangler/state",
+    "db:migrate-prod": "wrangler d1 migrations apply soundscape"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "drizzle-kit": "^0.20.6"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.29.1"
+  },
+  "files": [
+    "src/"
+  ]
+}

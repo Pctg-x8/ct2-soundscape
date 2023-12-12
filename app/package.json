@@ -1,31 +1,37 @@
 {
-  "name": "ct2-soundscape-admin-console",
+  "name": "app",
   "private": true,
   "sideEffects": false,
   "type": "module",
   "scripts": {
     "build": "remix build",
+    "deploy": "wrangler deploy",
     "dev": "remix dev --manual -c \"pnpm dev:wrangler\"",
-    "dev:wrangler": "wrangler dev --live-reload --persist-to=../.wrangler/state"
+    "dev:wrangler": "wrangler dev --live-reload --persist-to=../.wrangler/state",
+    "local-stg": "cross-env NODE_ENV=production remix build && pnpm dev:wrangler"
   },
   "dependencies": {
     "@cloudflare/kv-asset-handler": "^0.3.0",
     "@remix-run/cloudflare": "^2.3.1",
+    "@remix-run/css-bundle": "^2.3.1",
+    "@remix-run/node": "^2.3.1",
     "@remix-run/react": "^2.3.1",
+    "@remix-run/serve": "^2.3.1",
     "@remix-run/server-runtime": "^2.3.1",
-    "isbot": "latest",
+    "isbot": "^3.6.8",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "soundscape-shared": "workspace:^"
   },
-  "engines": {
-    "node": ">=18.0.0"
-  },
   "devDependencies": {
     "@remix-run/dev": "^2.3.1",
+    "@remix-run/eslint-config": "^2.3.1",
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
-    "autoprefixer": "^10.4.16",
-    "postcss-normalize": "^10.0.1"
+    "eslint": "^8.38.0",
+    "typescript": "^5.1.6"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

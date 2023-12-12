@@ -6,9 +6,8 @@ import {
     json,
 } from "@remix-run/cloudflare";
 import "./style.css";
-import { drizzle } from "drizzle-orm/d1";
-import { details } from "../../../../src/schema";
-// import mime from "mime-types";
+import { ContentFlags } from "soundscape-shared/src/schema";
+import { CloudflareContentRepository } from "soundscape-shared/src/content";
 
 export const meta: MetaDescriptor[] = [{ title: "Uploader - Soundscape (Admin Console)" }];
 
@@ -19,23 +18,18 @@ export async function action({ request, context: { env } }: ActionFunctionArgs) 
         unstable_createMemoryUploadHandler({ maxPartSize: 100 * 1024 * 1024 })
     );
     const file = body.get("file")! as File;
-    // const fileExt = mime.extension(file.type);
 
-    // TODO: ファイルアップロードに失敗したらレコード消す
-    const [inserted] = await drizzle(env.INFO_STORE)
-        .insert(details)
-        .values([
-            {
-                title: String(body.get("title")),
-                dateJst: new Date(String(body.get("time"))),
-                comment: String(body.get("comment")),
-            },
-        ])
-        .returning({ id: details.id })
-        .execute();
-    await env.OBJECT_STORE.put(inserted.id.toString(), file);
+    const id = await new CloudflareContentRepository(env.INFO_STORE, env.OBJECT_STORE).add(
+        {
+            title: String(body.get("title")),
+            comment: String(body.get("comment")),
+            dateJst: new Date(String(body.get("time"))),
+            flags: new ContentFlags(),
+        },
+        file
+    );
 
-    return json({ success: inserted.id });
+    return json({ success: id });
 }
 
 export default function Page() {
