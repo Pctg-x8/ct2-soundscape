@@ -1,5 +1,5 @@
-import { Form } from "@remix-run/react";
-import { useState, type FormEvent } from "react";
+import { useFetcher } from "@remix-run/react";
+import { type FormEvent } from "react";
 
 export type EntryTableRow = {
     readonly id: number;
@@ -11,7 +11,8 @@ export type EntryTableRow = {
 };
 
 export default function EntryTable({ initItems }: { readonly initItems: EntryTableRow[] }) {
-    const [items, setItems] = useState(initItems);
+    const f = useFetcher();
+    const items = f.formData ? initItems.filter((x) => x.id !== Number(f.formData?.get("deleteAction"))) : initItems;
 
     const onSubmit = (e: FormEvent<HTMLFormElement>) => {
         const deleteAction = Number(e.currentTarget["deleteAction"].value);
@@ -19,8 +20,6 @@ export default function EntryTable({ initItems }: { readonly initItems: EntryTab
             e.preventDefault();
             return;
         }
-
-        setItems((xs) => xs.filter((x) => x.id !== deleteAction));
     };
 
     return (
@@ -45,11 +44,12 @@ export default function EntryTable({ initItems }: { readonly initItems: EntryTab
                         </td>
                         <td>{x.downloadAllowed ? "DL可" : ""}</td>
                         <td>
-                            <Form method="post" replace onSubmit={onSubmit}>
+                            <f.Form method="post" onSubmit={onSubmit}>
                                 <button type="submit" name="deleteAction" value={x.id}>
                                     削除
                                 </button>
-                            </Form>
+                                <button type="button">編集</button>
+                            </f.Form>
                         </td>
                     </tr>
                 ))}

@@ -36,12 +36,12 @@ export async function action({ request, context }: ActionFunctionArgs) {
 export default function Page() {
     const a = useActionData<typeof action>();
     const navigation = useNavigation();
-    const isPending = navigation.formAction == "/upload";
+    const isPending = navigation.state == "submitting";
 
     return (
         <article id="UploadForm">
             <h1>ファイルアップロード</h1>
-            <Form method="post" encType="multipart/form-data">
+            <Form method="post" encType="multipart/form-data" replace>
                 <fieldset disabled={isPending}>
                     <section>
                         <label htmlFor="title">タイトル</label>
