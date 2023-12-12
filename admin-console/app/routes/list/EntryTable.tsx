@@ -1,5 +1,5 @@
 import { useFetcher } from "@remix-run/react";
-import { type FormEvent } from "react";
+import type { MouseEventHandler, FormEvent } from "react";
 
 export type EntryTableRow = {
     readonly id: number;
@@ -7,10 +7,17 @@ export type EntryTableRow = {
     readonly year: number;
     readonly month: number;
     readonly day: number;
+    readonly comment: string;
     readonly downloadAllowed: boolean;
 };
 
-export default function EntryTable({ initItems }: { readonly initItems: EntryTableRow[] }) {
+export default function EntryTable({
+    initItems,
+    onEditClicked,
+}: {
+    readonly initItems: EntryTableRow[];
+    readonly onEditClicked: (current: EntryTableRow) => MouseEventHandler<HTMLButtonElement>;
+}) {
     const f = useFetcher();
     const items = f.formData ? initItems.filter((x) => x.id !== Number(f.formData?.get("deleteAction"))) : initItems;
 
@@ -43,12 +50,14 @@ export default function EntryTable({ initItems }: { readonly initItems: EntryTab
                             {x.day.toString().padStart(2, "0")}
                         </td>
                         <td>{x.downloadAllowed ? "DL可" : ""}</td>
-                        <td>
+                        <td className="actionButtons">
                             <f.Form method="post" onSubmit={onSubmit}>
                                 <button type="submit" name="deleteAction" value={x.id}>
                                     削除
                                 </button>
-                                <button type="button">編集</button>
+                                <button type="button" onClick={onEditClicked(x)}>
+                                    編集
+                                </button>
                             </f.Form>
                         </td>
                     </tr>

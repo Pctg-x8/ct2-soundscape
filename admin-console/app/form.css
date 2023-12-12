@@ -1,0 +1,54 @@
+.contentForm {
+    padding: 1.6rem 2rem;
+    padding-bottom: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2em;
+
+    & > fieldset {
+        outline: none;
+        border: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    & section {
+        display: flex;
+        flex-direction: column;
+
+        & > label,
+        & > p.labelLike {
+            font-size: 80%;
+            color: #999;
+        }
+
+        input {
+            outline: none;
+            border: none;
+            border-bottom: 2px solid #309;
+            padding: 0.4rem;
+
+            &:invalid {
+                border-color: red;
+                background-color: rgb(255 0 0 / 10%);
+            }
+        }
+
+        textarea {
+            outline: none;
+            border: none;
+            border-bottom: 2px solid #309;
+            padding: 0.4rem;
+            resize: vertical;
+            min-height: calc(1rem + 0.6rem);
+        }
+
+        &.buttons {
+            margin-top: 1.6rem;
+            display: flex;
+            flex-direction: row;
+            gap: 1.6rem;
+            justify-content: center;
+        }
+    }
+}

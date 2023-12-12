@@ -5,7 +5,6 @@ import {
     unstable_parseMultipartFormData,
     json,
 } from "@remix-run/cloudflare";
-import "./style.css";
 import { ContentFlags } from "soundscape-shared/src/schema";
 
 export const meta: MetaDescriptor[] = [{ title: "Uploader - Soundscape (Admin Console)" }];
@@ -41,7 +40,7 @@ export default function Page() {
     return (
         <article id="UploadForm">
             <h1>ファイルアップロード</h1>
-            <Form method="post" encType="multipart/form-data" replace>
+            <Form method="post" encType="multipart/form-data" replace className="contentForm">
                 <fieldset disabled={isPending}>
                     <section>
                         <label htmlFor="title">タイトル</label>

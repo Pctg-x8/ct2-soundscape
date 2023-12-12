@@ -20,4 +20,10 @@
     td.num {
         text-align: right;
     }
+
+    td.actionButtons {
+        button + button {
+            margin-left: 8px;
+        }
+    }
 }
