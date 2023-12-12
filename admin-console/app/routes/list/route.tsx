@@ -3,14 +3,11 @@ import { Await, type ShouldRevalidateFunctionArgs, useLoaderData } from "@remix-
 import { Suspense } from "react";
 import "./style.css";
 import EntryTable, { type EntryTableRow } from "./EntryTable";
-import { CloudflareContentRepository } from "soundscape-shared/src/content";
 
 export const meta: MetaDescriptor[] = [{ title: "Content List - Soundscape (Admin Console)" }];
 
 export async function loader({ context }: LoaderFunctionArgs) {
-    const contentRepo = new CloudflareContentRepository(context.env.INFO_STORE, context.env.OBJECT_STORE);
-
-    const items: Promise<EntryTableRow[]> = contentRepo.allDetails.then((xs) =>
+    const items: Promise<EntryTableRow[]> = context.contentRepository.allDetails.then((xs) =>
         xs.map((x) => ({
             id: x.id,
             title: x.title,
@@ -28,9 +25,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
 export async function action({ request, context }: ActionFunctionArgs) {
     const values = await request.formData();
 
-    await new CloudflareContentRepository(context.env.INFO_STORE, context.env.OBJECT_STORE).delete(
-        Number(values.get("deleteAction"))
-    );
+    await context.contentRepository.delete(Number(values.get("deleteAction")));
 
     return true;
 }

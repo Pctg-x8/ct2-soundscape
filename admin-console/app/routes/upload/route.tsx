@@ -7,11 +7,10 @@ import {
 } from "@remix-run/cloudflare";
 import "./style.css";
 import { ContentFlags } from "soundscape-shared/src/schema";
-import { CloudflareContentRepository } from "soundscape-shared/src/content";
 
 export const meta: MetaDescriptor[] = [{ title: "Uploader - Soundscape (Admin Console)" }];
 
-export async function action({ request, context: { env } }: ActionFunctionArgs) {
+export async function action({ request, context }: ActionFunctionArgs) {
     // TODO: 本来R2にはストリーミングputのAPIがあるんだけど、AsyncIterable->ReadableStreamの方法が存在しないので一旦メモリに貯める
     const body = await unstable_parseMultipartFormData(
         request,
@@ -19,7 +18,7 @@ export async function action({ request, context: { env } }: ActionFunctionArgs) 
     );
     const file = body.get("file")! as File;
 
-    const id = await new CloudflareContentRepository(env.INFO_STORE, env.OBJECT_STORE).add(
+    const id = await context.contentRepository.add(
         {
             title: String(body.get("title")),
             comment: String(body.get("comment")),

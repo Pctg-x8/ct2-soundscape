@@ -1,10 +1,9 @@
 import { type LoaderFunctionArgs, defer } from "@remix-run/cloudflare";
 import { Await, useLoaderData } from "@remix-run/react";
 import { Suspense } from "react";
-import { CloudflareContentRepository } from "soundscape-shared/src/content";
 
-export function loader({ context: { env } }: LoaderFunctionArgs) {
-    const ids = new CloudflareContentRepository(env.INFO_STORE, env.OBJECT_STORE).allDetails;
+export function loader({ context }: LoaderFunctionArgs) {
+    const ids = context.contentRepository.allDetails;
 
     return defer({ ids });
 }
