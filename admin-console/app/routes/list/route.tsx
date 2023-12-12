@@ -12,13 +12,14 @@ import "./style.css";
 import EntryTable, { type EntryTableRow } from "./EntryTable";
 import type { ContentDetails } from "soundscape-shared/src/content";
 import { ContentFlags } from "soundscape-shared/src/schema";
+import { ContentId } from "soundscape-shared/src/content";
 
 export const meta: MetaDescriptor[] = [{ title: "Content List - Soundscape (Admin Console)" }];
 
 export async function loader({ context }: LoaderFunctionArgs) {
     const items: Promise<EntryTableRow[]> = context.contentRepository.allDetails.then((xs) =>
         xs.map((x) => ({
-            id: x.id,
+            id: x.id.value,
             title: x.title,
             year: x.dateJst.getFullYear(),
             // Note: returned as 0-based(Jan = 0)
@@ -38,7 +39,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
     const deleteAction = values.get("deleteAction");
     if (deleteAction) {
-        await context.contentRepository.delete(Number(deleteAction));
+        await context.contentRepository.delete(new ContentId.External(Number(deleteAction)));
         return json({ action: "delete" });
     }
 
@@ -48,8 +49,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
         if (saveRequired) {
             console.log("save required", values);
             const file = values.get("file");
-            const id = Number(fromEditDialog);
-            const newDetails: ContentDetails = {
+            const id = new ContentId.External(Number(fromEditDialog));
+            const newDetails: Partial<ContentDetails> = {
                 title: String(values.get("title")),
                 comment: String(values.get("comment")),
                 dateJst: new Date(String(values.get("time"))),

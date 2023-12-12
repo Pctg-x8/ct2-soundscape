@@ -3,7 +3,7 @@ import type { Fetcher } from "@remix-run/react";
 import * as build from "../build";
 import __STATIC_CONTENT_MANIFEST from "__STATIC_CONTENT_MANIFEST";
 import { getAssetFromKV } from "@cloudflare/kv-asset-handler";
-import { CloudflareContentRepository } from "soundscape-shared/src/content";
+import { CloudflareContentRepository, Skip32ContentIdObfuscator } from "soundscape-shared/src/content";
 import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
 
 const MANIFEST = JSON.parse(__STATIC_CONTENT_MANIFEST);
@@ -18,6 +18,7 @@ type FetchEnv = {
     readonly __STATIC_CONTENT: Fetcher;
     readonly INFO_STORE: D1Database;
     readonly OBJECT_STORE: R2Bucket;
+    readonly CONTENT_ID_OBFUSCATOR_KEY: string;
 };
 
 export default {
@@ -37,9 +38,12 @@ export default {
         } catch (e) {}
 
         try {
-            return await handleRemixRequest(req, {
-                contentRepository: new CloudflareContentRepository(env.INFO_STORE, env.OBJECT_STORE),
-            });
+            const idObfuscator = new Skip32ContentIdObfuscator(
+                new Uint8Array(JSON.parse(env.CONTENT_ID_OBFUSCATOR_KEY))
+            );
+            const contentRepository = new CloudflareContentRepository(idObfuscator, env.INFO_STORE, env.OBJECT_STORE);
+
+            return await handleRemixRequest(req, { contentRepository });
         } catch (e) {
             console.error(e);
             return new Response("An unexpected error occured", { status: 500 });

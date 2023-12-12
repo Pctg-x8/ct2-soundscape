@@ -29,7 +29,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
         file
     );
 
-    return json({ success: id });
+    return json({ success: id.value });
 }
 
 export default function Page() {
