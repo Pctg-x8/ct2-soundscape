@@ -1,6 +1,7 @@
 import { useLoaderData } from "@remix-run/react";
 import type { LoaderFunctionArgs } from "@remix-run/server-runtime";
 import { ContentId } from "soundscape-shared/src/content";
+import Player from "~/components/Player";
 
 export async function loader({ params, context }: LoaderFunctionArgs) {
     const audioSource = await context.contentRepository.getContentUrl(new ContentId.External(Number(params["id"])));
@@ -15,12 +16,8 @@ export function shouldRevalidate() {
     return true;
 }
 
-export default function Player() {
+export default function Page() {
     const { audioSource } = useLoaderData<typeof loader>();
 
-    return (
-        <section>
-            <audio src={audioSource} controls />
-        </section>
-    );
+    return <Player source={audioSource} />;
 }

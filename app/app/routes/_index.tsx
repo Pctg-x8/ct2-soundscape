@@ -1,3 +1,5 @@
+import Player from "~/components/Player";
+
 export default function Page() {
-    return <section></section>;
+    return <Player />;
 }
