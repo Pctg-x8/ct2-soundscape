@@ -9,3 +9,7 @@ bucket = "./public"
 binding = "INFO_STORE"
 database_name = "soundscape"
 database_id = "5b7c43cc-faf9-4bb1-872b-ef4de18009ae"
+
+[[r2_buckets]]
+binding = "OBJECT_STORE"
+bucket_name = "soundscape"

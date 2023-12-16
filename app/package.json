@@ -11,6 +11,7 @@
     "local-stg": "cross-env NODE_ENV=production remix build && pnpm dev:wrangler"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.472.0",
     "@cloudflare/kv-asset-handler": "^0.3.0",
     "@remix-run/cloudflare": "^2.3.1",
     "@remix-run/css-bundle": "^2.3.1",
@@ -29,6 +30,7 @@
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
     "eslint": "^8.38.0",
+    "prettier": "^3.1.1",
     "typescript": "^5.1.6"
   },
   "engines": {

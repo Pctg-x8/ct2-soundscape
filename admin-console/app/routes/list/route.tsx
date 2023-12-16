@@ -6,8 +6,8 @@ import {
     json,
 } from "@remix-run/cloudflare";
 import { Await, type ShouldRevalidateFunctionArgs, useLoaderData, useFetcher } from "@remix-run/react";
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
-import type { MouseEvent } from "react";
+import { Suspense, forwardRef, useCallback, useEffect, useRef, useState } from "react";
+import type { ForwardedRef, MouseEvent } from "react";
 import "./style.css";
 import EntryTable, { type EntryTableRow } from "./EntryTable";
 import type { ContentDetails } from "soundscape-shared/src/content";
@@ -97,8 +97,6 @@ export default function Page() {
     useEffect(() => {
         if (typeof fs.data !== "object" || fs.data === null) return;
 
-        console.log(fs.data);
-
         if ("action" in fs.data && (fs.data.action === "update" || fs.data.action === "update-cancel")) {
             editDialogRef.current?.close();
         }
@@ -120,57 +118,68 @@ export default function Page() {
                     {(items) => <EntryTable initItems={items} onEditClicked={onEditClicked} />}
                 </Await>
             </Suspense>
-            <dialog ref={editDialogRef}>
-                <h1>Edit #{editing.id}</h1>
-                <fs.Form method="post" encType="multipart/form-data" className="contentForm">
-                    <fieldset disabled={fs.state === "submitting"} key={editing.id}>
-                        <section>
-                            <label htmlFor="title">タイトル</label>
-                            <input id="title" name="title" defaultValue={editing.title} required />
-                        </section>
-                        <section>
-                            <label htmlFor="time">制作日</label>
-                            <input
-                                id="time"
-                                name="time"
-                                type="date"
-                                defaultValue={`${editing.year}-${editing.month
-                                    .toString()
-                                    .padStart(2, "0")}-${editing.day.toString().padStart(2, "0")}`}
-                                required
-                            />
-                        </section>
-                        <section>
-                            <label htmlFor="comment">コメント（Markdown可）</label>
-                            <textarea id="comment" name="comment" rows={1} defaultValue={editing.comment} />
-                        </section>
-                        <section>
-                            <label htmlFor="file">ファイル（置き換える場合）</label>
-                            <input id="file" name="file" type="file" />
-                        </section>
-                        <section>
-                            <p className="labelLike">オプション</p>
-                            <div>
-                                <input
-                                    id="enableDownloads"
-                                    name="enableDownloads"
-                                    type="checkbox"
-                                    defaultChecked={editing.downloadAllowed}
-                                />
-                                <label htmlFor="enableDownloads">ダウンロード許可</label>
-                            </div>
-                        </section>
-                        <section className="buttons">
-                            <button type="submit" name="fromEditDialog" value={editing.id.toString()}>
-                                確定
-                            </button>
-                            <button type="submit" name="fromEditDialog" value="false">
-                                取り消し
-                            </button>
-                        </section>
-                    </fieldset>
-                </fs.Form>
-            </dialog>
+            <EditDialog ref={editDialogRef} editing={editing} />
         </article>
     );
 }
+
+const EditDialog = forwardRef(function EditDialog(
+    { editing }: { readonly editing: EntryTableRow },
+    ref: ForwardedRef<HTMLDialogElement>
+) {
+    const f = useFetcher();
+
+    return (
+        <dialog ref={ref}>
+            <h1>Edit #{editing.id}</h1>
+            <f.Form method="post" encType="multipart/form-data" className="contentForm">
+                <fieldset disabled={f.state === "submitting"} key={editing.id}>
+                    <section>
+                        <label htmlFor="title">タイトル</label>
+                        <input id="title" name="title" defaultValue={editing.title} required />
+                    </section>
+                    <section>
+                        <label htmlFor="time">制作日</label>
+                        <input
+                            id="time"
+                            name="time"
+                            type="date"
+                            defaultValue={`${editing.year}-${editing.month.toString().padStart(2, "0")}-${editing.day
+                                .toString()
+                                .padStart(2, "0")}`}
+                            required
+                        />
+                    </section>
+                    <section>
+                        <label htmlFor="comment">コメント（Markdown可）</label>
+                        <textarea id="comment" name="comment" rows={1} defaultValue={editing.comment} />
+                    </section>
+                    <section>
+                        <label htmlFor="file">ファイル（置き換える場合）</label>
+                        <input id="file" name="file" type="file" />
+                    </section>
+                    <section>
+                        <p className="labelLike">オプション</p>
+                        <div>
+                            <input
+                                id="enableDownloads"
+                                name="enableDownloads"
+                                type="checkbox"
+                                defaultChecked={editing.downloadAllowed}
+                            />
+                            <label htmlFor="enableDownloads">ダウンロード許可</label>
+                        </div>
+                    </section>
+                    <section className="buttons">
+                        <button type="submit" name="fromEditDialog" value={editing.id.toString()}>
+                            確定
+                        </button>
+                        <button type="submit" name="fromEditDialog" value="false">
+                            取り消し
+                        </button>
+                    </section>
+                </fieldset>
+            </f.Form>
+        </dialog>
+    );
+});
