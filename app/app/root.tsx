@@ -2,8 +2,15 @@ import { cssBundleHref } from "@remix-run/css-bundle";
 import { defer, type LinksFunction, type LoaderFunctionArgs } from "@remix-run/cloudflare";
 import { Await, Link, Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from "@remix-run/react";
 import { Suspense } from "react";
+import "./root.css";
 
-export const links: LinksFunction = () => [...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : [])];
+export const links: LinksFunction = () => [
+    {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200",
+    },
+    ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
+];
 
 export type Content = {
     readonly id: number;
