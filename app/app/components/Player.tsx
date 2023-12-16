@@ -7,6 +7,11 @@ export default function Player({ source }: { readonly source?: string }) {
     const [totalLength, setTotalLength] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
 
+    // Note: sourceが変わった場合は再生が止まるのでそれと同期させる
+    useEffect(() => {
+        setPlaying(false);
+    }, [source]);
+
     useEffect(() => {
         const subscriptionCanceller = new AbortController();
 
