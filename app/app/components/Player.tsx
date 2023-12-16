@@ -2,7 +2,8 @@ import { type ChangeEvent, useEffect, useRef, useState } from "react";
 
 export default function Player({ source, title }: { readonly source?: string; readonly title: string }) {
     const nativePlayerRef = useRef<HTMLAudioElement>(null);
-    const [isPlaying, setPlaying] = useState(false);
+    // Note: autoplayなので最初はtrue
+    const [isPlaying, setPlaying] = useState(true);
     const [volume, setVolume] = useState(1);
     const [totalLength, setTotalLength] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
@@ -38,21 +39,11 @@ export default function Player({ source, title }: { readonly source?: string; re
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [nativePlayerRef.current]);
 
-    // Note: 自動再生
-    useEffect(() => {
-        const p = nativePlayerRef.current;
-        if (!p) return;
-
-        p.volume = volume;
-        p.play();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [nativePlayerRef.current, source]);
-
     const onSeek = (e: ChangeEvent<HTMLInputElement>) => {
         const p = nativePlayerRef.current;
         if (!p) return;
 
-        p.fastSeek(Number(e.currentTarget.value));
+        p.currentTime = Number(e.currentTarget.value);
     };
     const onStop = () => {
         const p = nativePlayerRef.current;
@@ -75,13 +66,13 @@ export default function Player({ source, title }: { readonly source?: string; re
         const p = nativePlayerRef.current;
         if (!p) return;
 
-        p.fastSeek(p.currentTime + 10.0);
+        p.currentTime += 10;
     };
     const onFastForward = () => {
         const p = nativePlayerRef.current;
         if (!p) return;
 
-        p.fastSeek(p.currentTime - 10.0);
+        p.currentTime -= 10;
     };
     const onVolumeChanged = (e: ChangeEvent<HTMLInputElement>) => {
         const p = nativePlayerRef.current;
@@ -116,7 +107,7 @@ export default function Player({ source, title }: { readonly source?: string; re
                 <input type="range" min={0} max={1} step={0.01} value={volume} onChange={onVolumeChanged} />
                 <span className="material-symbols-outlined">volume_up</span>
             </section>
-            <audio src={source} ref={nativePlayerRef} />
+            <audio src={source} ref={nativePlayerRef} autoPlay />
         </section>
     );
 }

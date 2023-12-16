@@ -24,6 +24,7 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
 };
 
 export function shouldRevalidate() {
+    // 毎回署名付きURLを作ってもらう
     return true;
 }
 
