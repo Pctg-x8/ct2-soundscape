@@ -17,9 +17,17 @@ body {
 #Player {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
-    grid-template-areas: "seek seek" "controls volume";
+    grid-template-areas: "playing playing" "seek seek" "controls volume";
     column-gap: 0.8rem;
+}
+
+#PlayerPlayingArea {
+    grid-area: playing;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: bolder;
+    margin: 0;
+    padding: 0;
 }
 
 #PlayerSeekBar {

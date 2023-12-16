@@ -1,16 +1,11 @@
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 
-export default function Player({ source }: { readonly source?: string }) {
+export default function Player({ source, title }: { readonly source?: string; readonly title: string }) {
     const nativePlayerRef = useRef<HTMLAudioElement>(null);
     const [isPlaying, setPlaying] = useState(false);
     const [volume, setVolume] = useState(1);
     const [totalLength, setTotalLength] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
-
-    // Note: sourceが変わった場合は再生が止まるのでそれと同期させる
-    useEffect(() => {
-        setPlaying(false);
-    }, [source]);
 
     useEffect(() => {
         const subscriptionCanceller = new AbortController();
@@ -42,6 +37,16 @@ export default function Player({ source }: { readonly source?: string }) {
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [nativePlayerRef.current]);
+
+    // Note: 自動再生
+    useEffect(() => {
+        const p = nativePlayerRef.current;
+        if (!p) return;
+
+        p.volume = volume;
+        p.play();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [nativePlayerRef.current, source]);
 
     const onSeek = (e: ChangeEvent<HTMLInputElement>) => {
         const p = nativePlayerRef.current;
@@ -87,8 +92,10 @@ export default function Player({ source }: { readonly source?: string }) {
 
     return (
         <section id="Player">
+            <h1 id="PlayerPlayingArea">{title}</h1>
             <section id="PlayerSeekBar">
                 <input type="range" min={0} max={totalLength} step={0.01} value={currentTime} onChange={onSeek} />
+                {toTimecode(currentTime)}/{toTimecode(totalLength)}
             </section>
             <section id="PlayerControls">
                 <button type="button" onClick={onFastRewind}>
@@ -109,7 +116,15 @@ export default function Player({ source }: { readonly source?: string }) {
                 <input type="range" min={0} max={1} step={0.01} value={volume} onChange={onVolumeChanged} />
                 <span className="material-symbols-outlined">volume_up</span>
             </section>
-            {source ? <audio src={source} controls ref={nativePlayerRef} style={{ display: "none" }} /> : undefined}
+            <audio src={source} ref={nativePlayerRef} />
         </section>
     );
+}
+
+function toTimecode(sec: number): string {
+    const min = Math.trunc(sec / 60);
+
+    return `${min.toFixed(0)}:${Math.trunc(sec % 60)
+        .toFixed(0)
+        .padStart(2, "0")}`;
 }
