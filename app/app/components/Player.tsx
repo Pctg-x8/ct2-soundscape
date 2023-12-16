@@ -44,6 +44,13 @@ export default function Player({ source }: { readonly source?: string }) {
 
         p.fastSeek(Number(e.currentTarget.value));
     };
+    const onStop = () => {
+        const p = nativePlayerRef.current;
+        if (!p) return;
+
+        p.pause();
+        p.currentTime = 0;
+    };
     const onPlayPause = () => {
         const p = nativePlayerRef.current;
         if (!p) return;
@@ -74,21 +81,30 @@ export default function Player({ source }: { readonly source?: string }) {
     };
 
     return (
-        <section>
-            <input type="range" min={0} max={totalLength} step={0.01} value={currentTime} onChange={onSeek} />
-            <button type="button" onClick={onFastRewind}>
-                <span className="material-symbols-outlined">fast_rewind</span>
-            </button>
-            <button type="button" onClick={onPlayPause}>
-                <span className="material-symbols-outlined">{isPlaying ? "pause" : "play_arrow"}</span>
-            </button>
-            <button type="button" onClick={onFastForward}>
-                <span className="material-symbols-outlined">fast_forward</span>
-            </button>
-            <span className="material-symbols-outlined">volume_down</span>
-            <input type="range" min={0} max={1} step={0.01} value={volume} onChange={onVolumeChanged} />
-            <span className="material-symbols-outlined">volume_up</span>
-            {source ? <audio src={source} controls ref={nativePlayerRef} /> : undefined}
+        <section id="Player">
+            <section id="PlayerSeekBar">
+                <input type="range" min={0} max={totalLength} step={0.01} value={currentTime} onChange={onSeek} />
+            </section>
+            <section id="PlayerControls">
+                <button type="button" onClick={onFastRewind}>
+                    <span className="material-symbols-outlined">fast_rewind</span>
+                </button>
+                <button type="button" onClick={onStop}>
+                    <span className="material-symbols-outlined">stop</span>
+                </button>
+                <button type="button" className="Main" onClick={onPlayPause}>
+                    <span className="material-symbols-outlined">{isPlaying ? "pause" : "play_arrow"}</span>
+                </button>
+                <button type="button" onClick={onFastForward}>
+                    <span className="material-symbols-outlined">fast_forward</span>
+                </button>
+            </section>
+            <section id="PlayerVolumeControls">
+                <span className="material-symbols-outlined">volume_down</span>
+                <input type="range" min={0} max={1} step={0.01} value={volume} onChange={onVolumeChanged} />
+                <span className="material-symbols-outlined">volume_up</span>
+            </section>
+            {source ? <audio src={source} controls ref={nativePlayerRef} style={{ display: "none" }} /> : undefined}
         </section>
     );
 }

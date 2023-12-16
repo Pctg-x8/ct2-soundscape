@@ -1,7 +1,57 @@
+@import-normalize;
+
+html,
+body {
+    font-family: system-ui, sans-serif;
+    font-size: 16pt;
+}
+
 .material-symbols-outlined {
     font-variation-settings:
         "FILL" 1,
         "wght" 400,
         "GRAD" 0,
         "opsz" 24;
+}
+
+#Player {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    grid-template-areas: "seek seek" "controls volume";
+    column-gap: 0.8rem;
+}
+
+#PlayerSeekBar {
+    grid-area: seek;
+}
+
+#PlayerControls {
+    grid-area: controls;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: end;
+    gap: 0.4rem;
+
+    & .Main {
+        transform: scale(1.25);
+    }
+
+    & button {
+        display: block;
+        background: transparent;
+        border: solid 2px #333;
+        border-radius: 50%;
+        aspect-ratio: 1 / 1;
+        cursor: pointer;
+    }
+}
+
+#PlayerVolumeControls {
+    grid-area: volume;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: start;
 }
