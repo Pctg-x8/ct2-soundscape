@@ -6,7 +6,7 @@ import { getAssetFromKV } from "@cloudflare/kv-asset-handler";
 import {
     CloudflareContentRepository,
     CloudflareLocalContentRepository,
-    ContentRepository,
+    type ContentRepository,
     Skip32ContentIdObfuscator,
 } from "soundscape-shared/src/content";
 import type { D1Database, R2Bucket } from "@cloudflare/workers-types";

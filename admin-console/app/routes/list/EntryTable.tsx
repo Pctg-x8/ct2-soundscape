@@ -1,6 +1,6 @@
 import { useFetcher } from "@remix-run/react";
 import type { MouseEventHandler, FormEvent } from "react";
-import { NumRange } from "soundscape-shared/src/content";
+import type { NumRange } from "soundscape-shared/src/content";
 
 export type EntryTableRow = {
     readonly id: number;
@@ -40,6 +40,8 @@ export default function EntryTable({
                 <tr>
                     <th>ID</th>
                     <th>タイトル</th>
+                    <th>アーティスト表記名</th>
+                    <th>ジャンル</th>
                     <th>制作日</th>
                     <th>DLCount</th>
                     <th>Flags</th>
@@ -51,6 +53,8 @@ export default function EntryTable({
                     <tr key={x.id}>
                         <td className="num">{x.id}</td>
                         <td>{x.title}</td>
+                        <td>{x.artist}</td>
+                        <td>{x.genre}</td>
                         <td className="center">
                             {x.year.toString()}/{x.month.toString().padStart(2, "0")}/
                             {x.day.toString().padStart(2, "0")}
