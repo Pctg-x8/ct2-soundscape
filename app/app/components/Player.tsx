@@ -1,10 +1,10 @@
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
+import { LocalStorage } from "src/localStorage";
 
 export default function Player({ source, title }: { readonly source?: string; readonly title: string }) {
     const nativePlayerRef = useRef<HTMLAudioElement>(null);
-    // Note: autoplayなので最初はtrue
-    const [isPlaying, setPlaying] = useState(true);
-    const [volume, setVolume] = useState(1);
+    const [isPlaying, setPlaying] = useState(false);
+    const [volume, setVolume] = useState(() => LocalStorage.Volume.get() ?? 1);
     const [totalLength, setTotalLength] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
 
@@ -20,24 +20,44 @@ export default function Player({ source, title }: { readonly source?: string; re
 
         nativePlayerRef.current?.addEventListener(
             "volumechange",
-            (e) => setVolume((e.currentTarget as HTMLAudioElement).volume),
+            (e) => {
+                LocalStorage.Volume.set((e.currentTarget as HTMLAudioElement).volume);
+                setVolume((e.currentTarget as HTMLAudioElement).volume);
+            },
             { signal: subscriptionCanceller.signal }
         );
 
         nativePlayerRef.current?.addEventListener(
             "timeupdate",
             (e) => {
-                setTotalLength((e.currentTarget as HTMLAudioElement).duration);
                 setCurrentTime((e.currentTarget as HTMLAudioElement).currentTime);
             },
             { signal: subscriptionCanceller.signal }
         );
+        nativePlayerRef.current?.addEventListener(
+            "durationchange",
+            (e) => setTotalLength((e.currentTarget as HTMLAudioElement).duration),
+            { signal: subscriptionCanceller.signal }
+        );
+
+        if (nativePlayerRef.current) {
+            nativePlayerRef.current.volume = volume;
+            setTotalLength(nativePlayerRef.current.duration);
+            setCurrentTime(nativePlayerRef.current.currentTime);
+        }
 
         return () => {
             subscriptionCanceller.abort();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [nativePlayerRef.current]);
+
+    // useEffect(() => {
+    //     if (nativePlayerRef.current) {
+    //         nativePlayerRef.current.play();
+    //     }
+    //     // eslint-disable-next-line react-hooks/exhaustive-deps
+    // }, [nativePlayerRef.current, source]);
 
     const onSeek = (e: ChangeEvent<HTMLInputElement>) => {
         const p = nativePlayerRef.current;
@@ -107,7 +127,7 @@ export default function Player({ source, title }: { readonly source?: string; re
                 <input type="range" min={0} max={1} step={0.01} value={volume} onChange={onVolumeChanged} />
                 <span className="material-symbols-outlined">volume_up</span>
             </section>
-            <audio src={source} ref={nativePlayerRef} autoPlay />
+            <audio src={source} ref={nativePlayerRef} />
         </section>
     );
 }
