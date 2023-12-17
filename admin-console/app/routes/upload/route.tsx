@@ -6,6 +6,8 @@ import {
     json,
 } from "@remix-run/cloudflare";
 import { ContentFlags } from "soundscape-shared/src/schema";
+import { useRef, useState } from "react";
+import { RIFFChunk, readRIFFFileHeader } from "src/riffReader";
 
 export const meta: MetaDescriptor[] = [{ title: "Uploader - Soundscape (Admin Console)" }];
 
@@ -40,10 +42,51 @@ export default function Page() {
     const navigation = useNavigation();
     const isPending = navigation.state == "submitting";
 
+    const form = useRef<HTMLFormElement>(null);
+    const file = useRef<File | null>(null);
+    const onAutoInputClicked = async () => {
+        if (!file.current || !form.current) return;
+
+        const formRef = form.current;
+
+        console.log(file.current);
+        const lastModifiedDate = new Date(file.current.lastModified);
+        formRef["time"].value = `${lastModifiedDate.getFullYear()}-${
+            lastModifiedDate.getMonth() + 1
+        }-${lastModifiedDate.getDate()}`;
+
+        const content = await file.current.arrayBuffer();
+        const riffFileHeader = readRIFFFileHeader(new DataView(content, 0));
+        if (riffFileHeader !== null && riffFileHeader.format === 0x57415645) {
+            // riff wave
+            RIFFChunk.readAll(new DataView(content, 12), {
+                onUnknown(c) {
+                    // console.log("unknown chunk", c.id);
+                },
+                onList(c) {
+                    const infoList = c.tryConvertToInfoList();
+                    if (!infoList) return;
+
+                    infoList.readAllEntries({
+                        onName(value) {
+                            (formRef["title"] as unknown as HTMLInputElement).value = value;
+                        },
+                        onGenre(value) {
+                            (formRef["genre"] as unknown as HTMLInputElement).value = value;
+                        },
+                        onArtist(value) {
+                            (formRef["artist"] as unknown as HTMLInputElement).value = value;
+                        },
+                    });
+                },
+            });
+        }
+    };
+
     return (
         <article id="UploadForm">
             <h1>ファイルアップロード</h1>
-            <Form method="post" encType="multipart/form-data" replace className="contentForm">
+            <Form method="post" encType="multipart/form-data" replace className="contentForm" ref={form}>
                 <fieldset disabled={isPending}>
                     <section>
                         <label htmlFor="title">タイトル</label>
@@ -89,7 +132,18 @@ export default function Page() {
                     </section>
                     <section>
                         <label htmlFor="file">ファイル</label>
-                        <input id="file" name="file" type="file" required />
+                        <input
+                            id="file"
+                            name="file"
+                            type="file"
+                            required
+                            onChange={(e) => {
+                                file.current = e.currentTarget.files?.item(0) ?? null;
+                            }}
+                        />
+                        <button type="button" onClick={onAutoInputClicked}>
+                            ファイルから自動入力
+                        </button>
                     </section>
                     <section>
                         <p className="labelLike">オプション</p>
