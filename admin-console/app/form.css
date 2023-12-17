@@ -20,6 +20,14 @@
         & > p.labelLike {
             font-size: 80%;
             color: #999;
+            margin: 0;
+            padding: 0;
+        }
+
+        & .inputGroup {
+            display: flex;
+            flex-direction: row;
+            align-items: baseline;
         }
 
         input {
@@ -31,6 +39,10 @@
             &:invalid {
                 border-color: red;
                 background-color: rgb(255 0 0 / 10%);
+            }
+
+            &.bpmInputBox {
+                width: calc(6ch + 0.8rem);
             }
         }
 

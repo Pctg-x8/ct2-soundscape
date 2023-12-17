@@ -1,7 +1,7 @@
 // content model
 
 import { D1Database, R2Bucket } from "@cloudflare/workers-types";
-import { ContentFlags, Details, details as detailsTable } from "./schema";
+import { ContentFlags, details as detailsTable } from "./schema";
 import { drizzle } from "drizzle-orm/d1";
 import { eq } from "drizzle-orm";
 import { skip32 } from "./skip32";
@@ -53,8 +53,13 @@ export namespace ContentId {
     }
 }
 
+export type NumRange = { readonly min: number; readonly max: number };
+
 export type ContentDetails = {
     readonly title: string;
+    readonly artist: string;
+    readonly genre: string;
+    readonly bpmRange: NumRange;
     readonly comment: string;
     readonly dateJst: Date;
     readonly flags: ContentFlags;
@@ -99,6 +104,9 @@ export class CloudflareLocalContentRepository implements ContentRepository {
                 xs.map((x) => ({
                     id: new ContentId.Internal(x.id).toExternal(this.idObfuscator),
                     title: x.title,
+                    artist: x.artist,
+                    genre: x.genre,
+                    bpmRange: { min: x.minBPM, max: x.maxBPM },
                     comment: x.comment,
                     dateJst: x.dateJst,
                     flags: x.flags,
@@ -111,6 +119,9 @@ export class CloudflareLocalContentRepository implements ContentRepository {
         return await drizzle(this.infoStore)
             .select({
                 title: detailsTable.title,
+                artist: detailsTable.artist,
+                genre: detailsTable.genre,
+                bpmRange: { min: detailsTable.minBPM, max: detailsTable.maxBPM },
                 comment: detailsTable.comment,
                 dateJst: detailsTable.dateJst,
                 flags: detailsTable.flags,
@@ -139,6 +150,10 @@ export class CloudflareLocalContentRepository implements ContentRepository {
             .values([
                 {
                     title: details.title,
+                    artist: details.artist,
+                    genre: details.genre,
+                    minBPM: details.bpmRange.min,
+                    maxBPM: details.bpmRange.max,
                     comment: details.comment,
                     dateJst: details.dateJst,
                     flags: details.flags,
@@ -218,6 +233,9 @@ export class CloudflareContentRepository implements ContentRepository {
                 xs.map((x) => ({
                     id: new ContentId.Internal(x.id).toExternal(this.idObfuscator),
                     title: x.title,
+                    artist: x.artist,
+                    genre: x.genre,
+                    bpmRange: { min: x.minBPM, max: x.maxBPM },
                     comment: x.comment,
                     dateJst: x.dateJst,
                     flags: x.flags,
@@ -230,6 +248,9 @@ export class CloudflareContentRepository implements ContentRepository {
         return await drizzle(this.infoStore)
             .select({
                 title: detailsTable.title,
+                artist: detailsTable.artist,
+                genre: detailsTable.genre,
+                bpmRange: { min: detailsTable.minBPM, max: detailsTable.maxBPM },
                 comment: detailsTable.comment,
                 dateJst: detailsTable.dateJst,
                 flags: detailsTable.flags,
@@ -262,6 +283,10 @@ export class CloudflareContentRepository implements ContentRepository {
             .values([
                 {
                     title: details.title,
+                    artist: details.artist,
+                    genre: details.genre,
+                    minBPM: details.bpmRange.min,
+                    maxBPM: details.bpmRange.max,
                     comment: details.comment,
                     dateJst: details.dateJst,
                     flags: details.flags,

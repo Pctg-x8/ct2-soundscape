@@ -20,6 +20,9 @@ export async function action({ request, context }: ActionFunctionArgs) {
     const id = await context.contentRepository.add(
         {
             title: String(body.get("title")),
+            artist: String(body.get("artist")),
+            genre: String(body.get("genre")),
+            bpmRange: { min: Number(body.get("minBPM")), max: Number(body.get("maxBPM")) },
             comment: String(body.get("comment")),
             dateJst: new Date(String(body.get("time"))),
             flags: ContentFlags.fromBooleans({
@@ -45,6 +48,36 @@ export default function Page() {
                     <section>
                         <label htmlFor="title">タイトル</label>
                         <input id="title" name="title" required />
+                    </section>
+                    <section>
+                        <label htmlFor="artist">アーティスト表記名</label>
+                        <input id="artist" name="artist" required />
+                    </section>
+                    <section>
+                        <label htmlFor="genre">ジャンル</label>
+                        <input id="genre" name="genre" required />
+                    </section>
+                    <section>
+                        <p className="labelLike">BPM範囲</p>
+                        <section className="inputGroup">
+                            <input
+                                name="minBPM"
+                                type="number"
+                                defaultValue={120}
+                                min={1}
+                                className="bpmInputBox"
+                                required
+                            />
+                            〜
+                            <input
+                                name="maxBPM"
+                                type="number"
+                                defaultValue={120}
+                                min={1}
+                                className="bpmInputBox"
+                                required
+                            />
+                        </section>
                     </section>
                     <section>
                         <label htmlFor="time">制作日</label>

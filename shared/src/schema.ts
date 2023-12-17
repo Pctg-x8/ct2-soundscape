@@ -70,6 +70,10 @@ export class ContentFlags {
 export const details = sqliteTable("details", {
     id: integer("id").primaryKey(),
     title: text("title").notNull(),
+    artist: text("artist").notNull(),
+    genre: text("genre").notNull(),
+    minBPM: integer("min_bpm").notNull(),
+    maxBPM: integer("max_bpm").notNull(),
     dateJst: integer("date_jst", { mode: "timestamp" }).notNull(),
     comment: text("comment").notNull().default(""),
     flags: ContentFlags.sqlType("flags").notNull().default(new ContentFlags()),

@@ -21,6 +21,9 @@ export async function loader({ context }: LoaderFunctionArgs) {
         xs.map((x) => ({
             id: x.id.value,
             title: x.title,
+            artist: x.artist,
+            genre: x.genre,
+            bpmRange: x.bpmRange,
             year: x.dateJst.getFullYear(),
             // Note: returned as 0-based(Jan = 0)
             month: x.dateJst.getMonth() + 1,
@@ -84,6 +87,9 @@ export default function Page() {
     const [editing, setEditing] = useState<EntryTableRow>({
         id: 0,
         title: "",
+        artist: "",
+        genre: "",
+        bpmRange: { min: 1, max: 1 },
         year: 0,
         month: 0,
         day: 0,
@@ -137,6 +143,36 @@ const EditDialog = forwardRef(function EditDialog(
                     <section>
                         <label htmlFor="title">タイトル</label>
                         <input id="title" name="title" defaultValue={editing.title} required />
+                    </section>
+                    <section>
+                        <label htmlFor="artist">アーティスト表記名</label>
+                        <input id="artist" name="artist" defaultValue={editing.artist} required />
+                    </section>
+                    <section>
+                        <label htmlFor="genre">ジャンル</label>
+                        <input id="genre" name="genre" defaultValue={editing.genre} required />
+                    </section>
+                    <section>
+                        <p className="labelLike">BPM範囲</p>
+                        <section className="inputGroup">
+                            <input
+                                name="minBPM"
+                                type="number"
+                                defaultValue={editing.bpmRange.min}
+                                min={1}
+                                className="bpmInputBox"
+                                required
+                            />
+                            〜
+                            <input
+                                name="maxBPM"
+                                type="number"
+                                defaultValue={editing.bpmRange.max}
+                                min={1}
+                                className="bpmInputBox"
+                                required
+                            />
+                        </section>
                     </section>
                     <section>
                         <label htmlFor="time">制作日</label>

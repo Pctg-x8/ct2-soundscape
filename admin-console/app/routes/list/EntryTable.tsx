@@ -1,9 +1,13 @@
 import { useFetcher } from "@remix-run/react";
 import type { MouseEventHandler, FormEvent } from "react";
+import { NumRange } from "soundscape-shared/src/content";
 
 export type EntryTableRow = {
     readonly id: number;
     readonly title: string;
+    readonly artist: string;
+    readonly genre: string;
+    readonly bpmRange: NumRange;
     readonly year: number;
     readonly month: number;
     readonly day: number;
