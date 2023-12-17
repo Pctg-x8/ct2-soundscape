@@ -59,9 +59,8 @@ body {
     width: 100%;
 }
 
-#PlayerSeekBarLoaded {
+.PlayerSeekBarLoaded {
     position: absolute;
-    left: 0;
     top: 0;
     height: 6px;
     background: #ccc;

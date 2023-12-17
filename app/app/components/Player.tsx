@@ -7,7 +7,7 @@ export default function Player({ source, title }: { readonly source?: string; re
     const [isPlaying, setPlaying] = useState(false);
     const [volume, setVolume] = useState(() => LocalStorage.Volume.get() ?? 1);
     const [totalLength, setTotalLength] = useState(0);
-    const [loadedLength, setLoadedLength] = useState(0);
+    const [loadedRanges, setLoadedRanges] = useState<(readonly [number, number])[]>([]);
     const [currentTime, setCurrentTime] = useState(0);
     const state = useNavigation();
     const [playQueued, setPlayQueued] = useState(false);
@@ -45,7 +45,14 @@ export default function Player({ source, title }: { readonly source?: string; re
         );
         nativePlayerRef.current?.addEventListener(
             "progress",
-            (e) => console.log((e.currentTarget as HTMLAudioElement).buffered),
+            (e) => {
+                const t = e.currentTarget as HTMLAudioElement;
+                const ranges = Array.from({ length: t.buffered.length }).map(
+                    (_, x) => [t.buffered.start(x), t.buffered.end(x)] as const
+                );
+
+                setLoadedRanges(ranges);
+            },
             { signal: subscriptionCanceller.signal }
         );
 
@@ -122,7 +129,16 @@ export default function Player({ source, title }: { readonly source?: string; re
             <section id="PlayerSeekBar">
                 <section id="PlayerSeekBarMain">
                     <div id="PlayerSeekBarBackground" />
-                    <div id="PlayerSeekBarLoaded" />
+                    {loadedRanges.map(([start, end], x) => (
+                        <div
+                            key={x}
+                            className="PlayerSeekBarLoaded"
+                            style={{
+                                left: `${(100 * start) / totalLength}%`,
+                                width: `${(100 * (end - start)) / totalLength}%`,
+                            }}
+                        />
+                    ))}
                     <div id="PlayerSeekBarPlayed" style={{ width: `${(100 * currentTime) / totalLength}%` }} />
                 </section>
                 <p>
@@ -154,9 +170,7 @@ export default function Player({ source, title }: { readonly source?: string; re
 }
 
 function toTimecode(sec: number): string {
-    const min = Math.trunc(sec / 60);
-
-    return `${min.toFixed(0)}:${Math.trunc(sec % 60)
+    return `${Math.trunc(sec / 60).toFixed(0)}:${Math.trunc(sec % 60)
         .toFixed(0)
         .padStart(2, "0")}`;
 }
