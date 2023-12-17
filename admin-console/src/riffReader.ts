@@ -17,6 +17,11 @@ export function readRIFFFileHeader(content: DataView): RIFFFileHeader | null {
         format: content.getUint32(8, false),
     };
 }
+export function isRIFFWave(content: DataView): boolean {
+    const fileHeader = readRIFFFileHeader(content);
+
+    return fileHeader !== null && fileHeader.format === 0x57415645;
+}
 
 export interface RIFFChunkHandler {
     onList(chunk: ListRIFFChunk): void;

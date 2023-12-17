@@ -7,7 +7,7 @@ import {
 } from "@remix-run/cloudflare";
 import { ContentFlags } from "soundscape-shared/src/schema";
 import { useRef, useState } from "react";
-import { RIFFChunk, readRIFFFileHeader } from "src/riffReader";
+import { RIFFChunk, isRIFFWave, readRIFFFileHeader } from "src/riffReader";
 
 export const meta: MetaDescriptor[] = [{ title: "Uploader - Soundscape (Admin Console)" }];
 
@@ -56,9 +56,7 @@ export default function Page() {
         }-${lastModifiedDate.getDate()}`;
 
         const content = await file.current.arrayBuffer();
-        const riffFileHeader = readRIFFFileHeader(new DataView(content, 0));
-        if (riffFileHeader !== null && riffFileHeader.format === 0x57415645) {
-            // riff wave
+        if (isRIFFWave(new DataView(content, 0))) {
             RIFFChunk.readAll(new DataView(content, 12), {
                 onUnknown(c) {
                     // console.log("unknown chunk", c.id);
