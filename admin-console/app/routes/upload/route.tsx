@@ -8,6 +8,7 @@ import {
 import { ContentFlags } from "soundscape-shared/src/schema";
 import { useRef, useState } from "react";
 import { RIFFChunk, isRIFFWave, readRIFFFileHeader } from "src/riffReader";
+import { ID3v2Section, tryParseID3v1 } from "src/mp3Reader";
 
 export const meta: MetaDescriptor[] = [{ title: "Uploader - Soundscape (Admin Console)" }];
 
@@ -79,6 +80,33 @@ export default function Page() {
                 },
             });
         }
+
+        const id3v1 = tryParseID3v1(new DataView(content));
+        if (id3v1) {
+            (formRef["title"] as unknown as HTMLInputElement).value = id3v1.title;
+            (formRef["artist"] as unknown as HTMLInputElement).value = id3v1.artist;
+            // TODO: マッピングが謎
+            (formRef["genre"] as unknown as HTMLInputElement).value = id3v1.genre.toString();
+        }
+
+        ID3v2Section.tryRead(new DataView(content))?.readAllFrames({
+            onUnknown(id, flags, value) {
+                // console.log(
+                //     "unknown id3v2 tag",
+                //     id,
+                //     Array.from({ length: value.byteLength }).map((_, o) => value.getUint8(o))
+                // );
+            },
+            onTitle(title) {
+                (formRef["title"] as unknown as HTMLInputElement).value = title;
+            },
+            onArtist(artist) {
+                (formRef["artist"] as unknown as HTMLInputElement).value = artist;
+            },
+            onGenre(genre) {
+                (formRef["genre"] as unknown as HTMLInputElement).value = genre;
+            },
+        });
     };
 
     return (
