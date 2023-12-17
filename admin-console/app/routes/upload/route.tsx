@@ -32,6 +32,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
                 allowDownload: body.get("enableDownloads") === "on",
             }),
         },
+        file.type,
         file
     );
 

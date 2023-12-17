@@ -51,12 +51,32 @@ export default {
             // forwarding local r2 repository
             const matches = new URLPattern("/r2-local/:path", req.url).exec(req.url);
             if (matches) {
-                const object = await env.OBJECT_STORE.get(matches.pathname.groups["path"]);
+                const object = await env.OBJECT_STORE.get(matches.pathname.groups["path"], {
+                    // @ts-ignore
+                    range: req.headers,
+                });
                 if (!object) {
                     return new Response("", { status: 404 });
                 }
 
-                return new Response(object.body as ReadableStream);
+                const headers = new Headers();
+                headers.append("Accept-Ranges", "bytes");
+                const contentType = object.httpMetadata?.contentType;
+                if (contentType) {
+                    headers.append("Content-Type", contentType);
+                }
+                const objectRange = object.range;
+                if (objectRange) {
+                    headers.append(
+                        "Content-Range",
+                        // @ts-ignore
+                        `bytes ${objectRange.offset}-${objectRange.offset + objectRange.length}/${object.size}`
+                    );
+                }
+
+                return new Response(object.body as ReadableStream, {
+                    headers,
+                });
             }
         }
 

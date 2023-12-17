@@ -77,12 +77,25 @@ export interface ContentRepository {
     /**
      * @returns id of the content
      */
-    add(details: Omit<ContentDetails, "downloadCount">, content: File): Promise<ContentId.External>;
-    add(details: Omit<ContentDetails, "downloadCount">, contentStream: ReadableStream): Promise<ContentId.External>;
+    add(
+        details: Omit<ContentDetails, "downloadCount">,
+        contentType: string,
+        content: File
+    ): Promise<ContentId.External>;
+    add(
+        details: Omit<ContentDetails, "downloadCount">,
+        contentType: string,
+        contentStream: ReadableStream
+    ): Promise<ContentId.External>;
 
     update(id: ContentId.Untyped, details: Partial<ContentDetails>): Promise<void>;
-    update(id: ContentId.Untyped, details: Partial<ContentDetails>, content: File): Promise<void>;
-    update(id: ContentId.Untyped, details: Partial<ContentDetails>, contentStream: ReadableStream): Promise<void>;
+    update(id: ContentId.Untyped, details: Partial<ContentDetails>, contentType: string, content: File): Promise<void>;
+    update(
+        id: ContentId.Untyped,
+        details: Partial<ContentDetails>,
+        contentType: string,
+        contentStream: ReadableStream
+    ): Promise<void>;
 
     delete(id: ContentId.Untyped): Promise<void>;
 }
@@ -141,6 +154,7 @@ export class CloudflareLocalContentRepository implements ContentRepository {
 
     async add(
         details: Omit<ContentDetails, "downloadCount">,
+        contentType: string,
         content: File | ReadableStream
     ): Promise<ContentId.External> {
         const db = drizzle(this.infoStore);
@@ -163,7 +177,9 @@ export class CloudflareLocalContentRepository implements ContentRepository {
             .execute();
 
         try {
-            await this.objectStore.put(inserted.id.toString(), content);
+            await this.objectStore.put(inserted.id.toString(), content, {
+                httpMetadata: new Headers({ "Content-Type": contentType }),
+            });
         } catch (e) {
             await db.delete(detailsTable).where(eq(detailsTable.id, inserted.id)).execute();
             throw e;
@@ -175,6 +191,7 @@ export class CloudflareLocalContentRepository implements ContentRepository {
     async update(
         id: ContentId.Untyped,
         details: Partial<ContentDetails>,
+        contentType?: string,
         content?: File | ReadableStream
     ): Promise<void> {
         const db = drizzle(this.infoStore);
@@ -189,7 +206,9 @@ export class CloudflareLocalContentRepository implements ContentRepository {
 
         try {
             if (content !== undefined && content !== null) {
-                await this.objectStore.put(id.toString(), content);
+                await this.objectStore.put(id.toString(), content, {
+                    httpMetadata: new Headers({ "Content-Type": contentType! }),
+                });
             }
         } catch (e) {
             await db.update(detailsTable).set(oldContent).where(eq(detailsTable.id, internalId)).execute();
@@ -274,6 +293,7 @@ export class CloudflareContentRepository implements ContentRepository {
 
     async add(
         details: Omit<ContentDetails, "downloadCount">,
+        contentType: string,
         content: File | ReadableStream
     ): Promise<ContentId.External> {
         const db = drizzle(this.infoStore);
@@ -296,7 +316,9 @@ export class CloudflareContentRepository implements ContentRepository {
             .execute();
 
         try {
-            await this.objectStore.put(inserted.id.toString(), content);
+            await this.objectStore.put(inserted.id.toString(), content, {
+                httpMetadata: new Headers({ "Content-Type": contentType }),
+            });
         } catch (e) {
             await db.delete(detailsTable).where(eq(detailsTable.id, inserted.id)).execute();
             throw e;
@@ -308,6 +330,7 @@ export class CloudflareContentRepository implements ContentRepository {
     async update(
         id: ContentId.Untyped,
         details: Partial<ContentDetails>,
+        contentType?: string,
         content?: File | ReadableStream
     ): Promise<void> {
         const db = drizzle(this.infoStore);
@@ -322,7 +345,9 @@ export class CloudflareContentRepository implements ContentRepository {
 
         try {
             if (content !== undefined && content !== null) {
-                await this.objectStore.put(id.toString(), content);
+                await this.objectStore.put(id.toString(), content, {
+                    httpMetadata: new Headers({ "Content-Type": contentType! }),
+                });
             }
         } catch (e) {
             await db.update(detailsTable).set(oldContent).where(eq(detailsTable.id, internalId)).execute();

@@ -69,7 +69,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
             if (file instanceof File) {
                 // with content replacement
-                await context.contentRepository.update(id, newDetails, file);
+                await context.contentRepository.update(id, newDetails, file.type, file);
             } else {
                 // preserve content
                 await context.contentRepository.update(id, newDetails);
