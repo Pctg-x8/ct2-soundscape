@@ -15,6 +15,8 @@ export const links: LinksFunction = () => [
 export type Content = {
     readonly id: number;
     readonly title: string;
+    readonly artist: string;
+    readonly genre: string;
 };
 
 export function loader({ context }: LoaderFunctionArgs) {
@@ -22,6 +24,8 @@ export function loader({ context }: LoaderFunctionArgs) {
         xs.map((x) => ({
             id: x.id.value,
             title: x.title,
+            artist: x.artist,
+            genre: x.genre,
         }))
     );
 
@@ -56,7 +60,9 @@ function ItemList({ items }: { readonly items: Content[] }) {
         <ul>
             {items.map((x) => (
                 <li key={x.id}>
-                    <Link to={`/play/${x.id}`}>{x.title}</Link>
+                    <Link to={`/play/${x.id}`}>
+                        [{x.genre}] {x.artist} - {x.title}
+                    </Link>
                 </li>
             ))}
         </ul>

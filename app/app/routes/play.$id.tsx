@@ -14,11 +14,11 @@ export async function loader({ params, context: { contentRepository } }: LoaderF
         throw new Response("", { status: 404 });
     }
 
-    return { audioSource, title: contentDetails.title };
+    return { audioSource, title: contentDetails.title, artist: contentDetails.artist };
 }
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
-    const pageTitle = data ? `${data.title} - Soundscape` : "Soundscape";
+    const pageTitle = data ? `${data.artist} - ${data.title} - Soundscape` : "Soundscape";
 
     return [{ title: pageTitle }];
 };
@@ -29,7 +29,7 @@ export function shouldRevalidate() {
 }
 
 export default function Page() {
-    const { audioSource, title } = useLoaderData<typeof loader>();
+    const { audioSource, title, artist } = useLoaderData<typeof loader>();
 
-    return <Player source={audioSource} title={title} />;
+    return <Player source={audioSource} title={`${artist} - ${title}`} />;
 }
