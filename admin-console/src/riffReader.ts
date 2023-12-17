@@ -1,3 +1,5 @@
+import { shiftDataViewHead, subsliceDataView } from "./dataViewHelper";
+
 function unFourccLE(x: number): string {
     return String.fromCharCode(x & 0xff, (x >> 8) & 0xff, (x >> 16) & 0xff, (x >> 24) & 0xff);
 }
@@ -42,13 +44,13 @@ export abstract class RIFFChunk {
     static read(content: DataView): RIFFChunk {
         const id = unFourccLE(content.getUint32(0, true));
         const byteLength = content.getUint32(4, true);
-        const contentView = new DataView(content.buffer, content.byteOffset + 8, byteLength);
+        const contentView = subsliceDataView(content, 8, byteLength);
 
         switch (id) {
             case "LIST":
                 return new ListRIFFChunk(contentView);
             default:
-                return new UnknownRIFFChunk(id, new DataView(content.buffer, content.byteOffset + 8, byteLength));
+                return new UnknownRIFFChunk(id, contentView);
         }
     }
 
@@ -90,15 +92,7 @@ export class ListRIFFChunk extends RIFFChunk {
     }
 
     tryConvertToInfoList(): RIFFInfoList | null {
-        return this.ty === "INFO"
-            ? new RIFFInfoList(
-                  new DataView(
-                      this.contentView.buffer,
-                      this.contentView.byteOffset + 4,
-                      this.contentView.byteLength - 4
-                  )
-              )
-            : null;
+        return this.ty === "INFO" ? new RIFFInfoList(shiftDataViewHead(this.contentView, 4)) : null;
     }
 }
 

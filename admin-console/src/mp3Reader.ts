@@ -1,3 +1,5 @@
+import { shiftDataViewHead, subsliceDataView } from "./dataViewHelper";
+
 export type ID3v1 = {
     readonly title: string;
     readonly artist: string;
@@ -33,13 +35,7 @@ export class ID3v2Section {
             console.warn("ID3v2.2 is not supported");
         }
 
-        return new ID3v2Section(
-            minorVersion,
-            version & 0xff,
-            flags,
-            size,
-            new DataView(content.buffer, content.byteOffset + 10, size)
-        );
+        return new ID3v2Section(minorVersion, version & 0xff, flags, size, subsliceDataView(content, 10, size));
     }
 
     constructor(
@@ -69,7 +65,7 @@ export class ID3v2Section {
             ? readSyncSafeInteger(this.content, at + 4)
             : this.content.getUint32(at + 4, false);
         const flags = this.content.getUint16(at + 8, false);
-        const value = new DataView(this.content.buffer, this.content.byteOffset + at + 10, size);
+        const value = subsliceDataView(this.content, at + 10, size);
 
         switch (id) {
             case "TIT2":
@@ -107,7 +103,7 @@ export interface ID3v2FrameHandler {
 
 function readID3v2Text(content: DataView): string {
     const encoding = content.getUint8(0);
-    const body = new DataView(content.buffer, content.byteOffset + 1, content.byteLength - 1);
+    const body = shiftDataViewHead(content, 1);
 
     switch (encoding) {
         case 1:
