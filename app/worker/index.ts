@@ -5,9 +5,9 @@ import __STATIC_CONTENT_MANIFEST from "__STATIC_CONTENT_MANIFEST";
 import { getAssetFromKV } from "@cloudflare/kv-asset-handler";
 import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import {
-    CloudflareContentRepository,
-    CloudflareLocalContentRepository,
-    type ContentRepository,
+    CloudflareContentReadonlyRepository,
+    CloudflareLocalContentReadonlyRepository,
+    type ContentReadonlyRepository,
     Skip32ContentIdObfuscator,
 } from "soundscape-shared/src/content";
 // @ts-ignore
@@ -85,9 +85,9 @@ export default {
                 new Uint8Array(JSON.parse(env.CONTENT_ID_OBFUSCATOR_KEY))
             );
 
-            let contentRepository: ContentRepository;
+            let contentRepository: ContentReadonlyRepository;
             if (process.env.NODE_ENV === "development") {
-                contentRepository = new CloudflareLocalContentRepository(
+                contentRepository = new CloudflareLocalContentReadonlyRepository(
                     idObfuscator,
                     env.INFO_STORE,
                     env.OBJECT_STORE,
@@ -99,7 +99,7 @@ export default {
                     secretAccessKey: env.OBJECT_STORE_S3_SECRET_ACCESS_KEY,
                 });
 
-                contentRepository = new CloudflareContentRepository(
+                contentRepository = new CloudflareContentReadonlyRepository(
                     idObfuscator,
                     env.INFO_STORE,
                     env.OBJECT_STORE,

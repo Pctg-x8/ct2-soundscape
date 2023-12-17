@@ -3,7 +3,7 @@
 /// <reference types="@cloudflare/workers-types" />
 
 import "@remix-run/server-runtime";
-import type { ContentRepository } from "soundscape-shared/src/content";
+import type { ContentReadonlyRepository } from "soundscape-shared/src/content";
 
 declare module "__STATIC_CONTENT_MANIFEST" {
     const manifest: string;
@@ -12,6 +12,6 @@ declare module "__STATIC_CONTENT_MANIFEST" {
 
 declare module "@remix-run/server-runtime" {
     export interface AppLoadContext {
-        readonly contentRepository: ContentRepository;
+        readonly contentRepository: ContentReadonlyRepository;
     }
 }

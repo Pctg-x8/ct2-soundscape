@@ -67,13 +67,13 @@ export type ContentDetails = {
 };
 export type IdentifiedContentDetails = ContentDetails & { readonly id: ContentId.External };
 
-export interface ContentRepository {
+export interface ContentReadonlyRepository {
     get allDetails(): Promise<IdentifiedContentDetails[]>;
-
     get(id: ContentId.Untyped): Promise<ContentDetails | undefined>;
-
     getContentUrl(id: ContentId.Untyped): Promise<string | undefined>;
+}
 
+export interface ContentRepository extends ContentReadonlyRepository {
     /**
      * @returns id of the content
      */
@@ -100,12 +100,12 @@ export interface ContentRepository {
     delete(id: ContentId.Untyped): Promise<void>;
 }
 
-export class CloudflareLocalContentRepository implements ContentRepository {
+export class CloudflareLocalContentReadonlyRepository implements ContentReadonlyRepository {
     constructor(
-        private readonly idObfuscator: ContentIdObfuscator,
-        private readonly infoStore: D1Database,
-        private readonly objectStore: R2Bucket,
-        private readonly objectStoreMountPath: string
+        protected readonly idObfuscator: ContentIdObfuscator,
+        protected readonly infoStore: D1Database,
+        protected readonly objectStore: R2Bucket,
+        protected readonly objectStoreMountPath: string
     ) {}
 
     get allDetails(): Promise<IdentifiedContentDetails[]> {
@@ -151,7 +151,12 @@ export class CloudflareLocalContentRepository implements ContentRepository {
 
         return Promise.resolve(url.toString());
     }
+}
 
+export class CloudflareLocalContentRepository
+    extends CloudflareLocalContentReadonlyRepository
+    implements ContentRepository
+{
     async add(
         details: Omit<ContentDetails, "downloadCount">,
         contentType: string,
@@ -234,13 +239,13 @@ export class CloudflareLocalContentRepository implements ContentRepository {
     }
 }
 
-export class CloudflareContentRepository implements ContentRepository {
+export class CloudflareContentReadonlyRepository implements ContentReadonlyRepository {
     constructor(
-        private readonly idObfuscator: ContentIdObfuscator,
-        private readonly infoStore: D1Database,
-        private readonly objectStore: R2Bucket,
-        private readonly objectStoreS3Client: AwsClient,
-        private readonly objectStoreS3Endpoint: URL
+        protected readonly idObfuscator: ContentIdObfuscator,
+        protected readonly infoStore: D1Database,
+        protected readonly objectStore: R2Bucket,
+        protected readonly objectStoreS3Client: AwsClient,
+        protected readonly objectStoreS3Endpoint: URL
     ) {}
 
     get allDetails(): Promise<IdentifiedContentDetails[]> {
@@ -290,7 +295,9 @@ export class CloudflareContentRepository implements ContentRepository {
             .sign(new Request(url, { method: "GET" }), { aws: { signQuery: true } })
             .then((x: Request) => x.url);
     }
+}
 
+export class CloudflareContentRepository extends CloudflareContentReadonlyRepository implements ContentRepository {
     async add(
         details: Omit<ContentDetails, "downloadCount">,
         contentType: string,
