@@ -10,8 +10,7 @@ import {
     type ShouldRevalidateFunctionArgs,
     useLoaderData,
     useFetcher,
-    Fetcher,
-    FetcherWithComponents,
+    type FetcherWithComponents,
 } from "@remix-run/react";
 import { Suspense, forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import type { ForwardedRef, MouseEvent } from "react";
