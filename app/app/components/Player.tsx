@@ -7,8 +7,10 @@ export default function Player({ source, title }: { readonly source?: string; re
     const [isPlaying, setPlaying] = useState(false);
     const [volume, setVolume] = useState(() => LocalStorage.Volume.get() ?? 1);
     const [totalLength, setTotalLength] = useState(0);
+    const [loadedLength, setLoadedLength] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
     const state = useNavigation();
+    const [playQueued, setPlayQueued] = useState(false);
 
     useEffect(() => {
         const subscriptionCanceller = new AbortController();
@@ -41,6 +43,11 @@ export default function Player({ source, title }: { readonly source?: string; re
             (e) => setTotalLength((e.currentTarget as HTMLAudioElement).duration),
             { signal: subscriptionCanceller.signal }
         );
+        nativePlayerRef.current?.addEventListener(
+            "progress",
+            (e) => console.log((e.currentTarget as HTMLAudioElement).buffered),
+            { signal: subscriptionCanceller.signal }
+        );
 
         if (nativePlayerRef.current) {
             nativePlayerRef.current.volume = volume;
@@ -55,18 +62,24 @@ export default function Player({ source, title }: { readonly source?: string; re
     }, [nativePlayerRef.current]);
 
     useEffect(() => {
-        if (nativePlayerRef.current && state.location?.state["autoplay"] === true) {
+        if (state.state === "loading") {
+            setPlayQueued(state.location?.state["autoplay"] === true);
+        }
+    }, [state.location, state.state]);
+
+    useEffect(() => {
+        if (nativePlayerRef.current && playQueued) {
             nativePlayerRef.current.play();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [nativePlayerRef.current, source, state.location]);
+    }, [nativePlayerRef.current, source, state.state, playQueued]);
 
-    const onSeek = (e: ChangeEvent<HTMLInputElement>) => {
-        const p = nativePlayerRef.current;
-        if (!p) return;
+    // const onSeek = (e: ChangeEvent<HTMLInputElement>) => {
+    //     const p = nativePlayerRef.current;
+    //     if (!p) return;
 
-        p.currentTime = Number(e.currentTarget.value);
-    };
+    //     p.currentTime = Number(e.currentTarget.value);
+    // };
     const onStop = () => {
         const p = nativePlayerRef.current;
         if (!p) return;
@@ -107,8 +120,14 @@ export default function Player({ source, title }: { readonly source?: string; re
         <section id="Player">
             <h1 id="PlayerPlayingArea">{title}</h1>
             <section id="PlayerSeekBar">
-                <input type="range" min={0} max={totalLength} step={0.01} value={currentTime} onChange={onSeek} />
-                {toTimecode(currentTime)}/{toTimecode(totalLength)}
+                <section id="PlayerSeekBarMain">
+                    <div id="PlayerSeekBarBackground" />
+                    <div id="PlayerSeekBarLoaded" />
+                    <div id="PlayerSeekBarPlayed" style={{ width: `${(100 * currentTime) / totalLength}%` }} />
+                </section>
+                <p>
+                    {toTimecode(currentTime)}/{toTimecode(totalLength)}
+                </p>
             </section>
             <section id="PlayerControls">
                 <button type="button" onClick={onFastRewind}>

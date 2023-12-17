@@ -1,5 +1,10 @@
 @import-normalize;
 
+p {
+    margin: 0;
+    padding: 0;
+}
+
 html,
 body {
     font-family: system-ui, sans-serif;
@@ -32,6 +37,44 @@ body {
 
 #PlayerSeekBar {
     grid-area: seek;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+#PlayerSeekBarMain {
+    flex-grow: 1;
+    margin: 1rem;
+    height: 6px;
+    position: relative;
+}
+
+#PlayerSeekBarBackground {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 6px;
+    background: #eee;
+    border-radius: 3px;
+    width: 100%;
+}
+
+#PlayerSeekBarLoaded {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 6px;
+    background: #ccc;
+    border-radius: 3px;
+}
+
+#PlayerSeekBarPlayed {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 6px;
+    background: #39f;
+    border-radius: 3px;
 }
 
 #PlayerControls {
