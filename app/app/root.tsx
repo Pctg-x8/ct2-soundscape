@@ -60,7 +60,7 @@ function ItemList({ items }: { readonly items: Content[] }) {
         <ul>
             {items.map((x) => (
                 <li key={x.id}>
-                    <Link to={`/play/${x.id}`}>
+                    <Link to={`/play/${x.id}`} state={{ autoplay: true }}>
                         [{x.genre}] {x.artist} - {x.title}
                     </Link>
                 </li>

@@ -1,3 +1,4 @@
+import { useNavigation } from "@remix-run/react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { LocalStorage } from "src/localStorage";
 
@@ -7,6 +8,7 @@ export default function Player({ source, title }: { readonly source?: string; re
     const [volume, setVolume] = useState(() => LocalStorage.Volume.get() ?? 1);
     const [totalLength, setTotalLength] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
+    const state = useNavigation();
 
     useEffect(() => {
         const subscriptionCanceller = new AbortController();
@@ -52,12 +54,12 @@ export default function Player({ source, title }: { readonly source?: string; re
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [nativePlayerRef.current]);
 
-    // useEffect(() => {
-    //     if (nativePlayerRef.current) {
-    //         nativePlayerRef.current.play();
-    //     }
-    //     // eslint-disable-next-line react-hooks/exhaustive-deps
-    // }, [nativePlayerRef.current, source]);
+    useEffect(() => {
+        if (nativePlayerRef.current && state.location?.state["autoplay"] === true) {
+            nativePlayerRef.current.play();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [nativePlayerRef.current, source, state.location]);
 
     const onSeek = (e: ChangeEvent<HTMLInputElement>) => {
         const p = nativePlayerRef.current;
