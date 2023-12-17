@@ -49,17 +49,25 @@ export default function Page() {
         if (!file.current || !form.current) return;
 
         const formRef = form.current;
+        const titleInput = formRef["title"] as unknown as HTMLInputElement,
+            artistInput = formRef["artist"] as unknown as HTMLInputElement,
+            genreInput = formRef["genre"] as unknown as HTMLInputElement,
+            timeInput = formRef["time"] as unknown as HTMLInputElement;
 
         const lastModifiedDate = new Date(file.current.lastModified);
-        formRef["time"].value = `${lastModifiedDate.getFullYear()}-${(lastModifiedDate.getMonth() + 1)
+        timeInput.value = `${lastModifiedDate.getFullYear()}-${(lastModifiedDate.getMonth() + 1)
             .toString()
             .padStart(2, "0")}-${lastModifiedDate.getDate().toString().padStart(2, "0")}`;
+
+        titleInput.value = "";
+        artistInput.value = "";
+        genreInput.value = "";
 
         const content = await file.current.arrayBuffer();
         if (isRIFFWave(new DataView(content, 0))) {
             RIFFChunk.readAll(new DataView(content, 12), {
                 onUnknown(c) {
-                    // console.log("unknown chunk", c.id);
+                    console.debug("unknown chunk", c.id);
                 },
                 onList(c) {
                     const infoList = c.tryConvertToInfoList();
@@ -67,13 +75,13 @@ export default function Page() {
 
                     infoList.readAllEntries({
                         onName(value) {
-                            (formRef["title"] as unknown as HTMLInputElement).value = value;
+                            titleInput.value = value;
                         },
                         onGenre(value) {
-                            (formRef["genre"] as unknown as HTMLInputElement).value = value;
+                            genreInput.value = value;
                         },
                         onArtist(value) {
-                            (formRef["artist"] as unknown as HTMLInputElement).value = value;
+                            artistInput.value = value;
                         },
                     });
                 },
@@ -82,28 +90,28 @@ export default function Page() {
 
         const id3v1 = tryParseID3v1(new DataView(content));
         if (id3v1) {
-            (formRef["title"] as unknown as HTMLInputElement).value = id3v1.title;
-            (formRef["artist"] as unknown as HTMLInputElement).value = id3v1.artist;
+            titleInput.value = id3v1.title;
+            artistInput.value = id3v1.artist;
             // TODO: マッピングが謎
-            (formRef["genre"] as unknown as HTMLInputElement).value = id3v1.genre.toString();
+            genreInput.value = id3v1.genre.toString();
         }
 
         ID3v2Section.tryRead(new DataView(content))?.readAllFrames({
             onUnknown(id, flags, value) {
-                // console.log(
-                //     "unknown id3v2 tag",
-                //     id,
-                //     Array.from({ length: value.byteLength }).map((_, o) => value.getUint8(o))
-                // );
+                console.debug(
+                    "unknown id3v2 tag",
+                    id,
+                    Array.from({ length: value.byteLength }).map((_, o) => value.getUint8(o))
+                );
             },
             onTitle(title) {
-                (formRef["title"] as unknown as HTMLInputElement).value = title;
+                titleInput.value = title;
             },
             onArtist(artist) {
-                (formRef["artist"] as unknown as HTMLInputElement).value = artist;
+                artistInput.value = artist;
             },
             onGenre(genre) {
-                (formRef["genre"] as unknown as HTMLInputElement).value = genre;
+                genreInput.value = genre;
             },
         });
     };

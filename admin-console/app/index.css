@@ -37,7 +37,7 @@ article {
     padding: 1rem;
     background: white;
     border-radius: 0.8em;
-    max-width: 720px;
+    max-width: var(--maxWidth, 720px);
     margin-left: auto;
     margin-right: auto;
 

@@ -5,7 +5,14 @@ import {
     type MetaDescriptor,
     json,
 } from "@remix-run/cloudflare";
-import { Await, type ShouldRevalidateFunctionArgs, useLoaderData, useFetcher } from "@remix-run/react";
+import {
+    Await,
+    type ShouldRevalidateFunctionArgs,
+    useLoaderData,
+    useFetcher,
+    Fetcher,
+    FetcherWithComponents,
+} from "@remix-run/react";
 import { Suspense, forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import type { ForwardedRef, MouseEvent } from "react";
 import "./style.css";
@@ -117,29 +124,28 @@ export default function Page() {
     );
 
     return (
-        <article>
+        // @ts-ignore
+        <article style={{ "--maxWidth": "1280px" }}>
             <h1>登録済み一覧</h1>
             <Suspense fallback={<p>Loading...</p>}>
                 <Await resolve={items}>
                     {(items) => <EntryTable initItems={items} onEditClicked={onEditClicked} />}
                 </Await>
             </Suspense>
-            <EditDialog ref={editDialogRef} editing={editing} />
+            <EditDialog ref={editDialogRef} editing={editing} fetcher={fs} />
         </article>
     );
 }
 
 const EditDialog = forwardRef(function EditDialog(
-    { editing }: { readonly editing: EntryTableRow },
+    { editing, fetcher }: { readonly editing: EntryTableRow; readonly fetcher: FetcherWithComponents<unknown> },
     ref: ForwardedRef<HTMLDialogElement>
 ) {
-    const f = useFetcher();
-
     return (
         <dialog ref={ref}>
             <h1>Edit #{editing.id}</h1>
-            <f.Form method="post" encType="multipart/form-data" className="contentForm">
-                <fieldset disabled={f.state === "submitting"} key={editing.id}>
+            <fetcher.Form method="post" encType="multipart/form-data" className="contentForm">
+                <fieldset disabled={fetcher.state === "submitting"} key={editing.id}>
                     <section>
                         <label htmlFor="title">タイトル</label>
                         <input id="title" name="title" defaultValue={editing.title} required />
@@ -215,7 +221,7 @@ const EditDialog = forwardRef(function EditDialog(
                         </button>
                     </section>
                 </fieldset>
-            </f.Form>
+            </fetcher.Form>
         </dialog>
     );
 });
