@@ -6,8 +6,8 @@ import {
     json,
 } from "@remix-run/cloudflare";
 import { ContentFlags } from "soundscape-shared/src/schema";
-import { useRef, useState } from "react";
-import { RIFFChunk, isRIFFWave, readRIFFFileHeader } from "src/riffReader";
+import { useRef } from "react";
+import { RIFFChunk, isRIFFWave } from "src/riffReader";
 import { ID3v2Section, tryParseID3v1 } from "src/mp3Reader";
 
 export const meta: MetaDescriptor[] = [{ title: "Uploader - Soundscape (Admin Console)" }];
@@ -50,11 +50,10 @@ export default function Page() {
 
         const formRef = form.current;
 
-        console.log(file.current);
         const lastModifiedDate = new Date(file.current.lastModified);
-        formRef["time"].value = `${lastModifiedDate.getFullYear()}-${
-            lastModifiedDate.getMonth() + 1
-        }-${lastModifiedDate.getDate()}`;
+        formRef["time"].value = `${lastModifiedDate.getFullYear()}-${(lastModifiedDate.getMonth() + 1)
+            .toString()
+            .padStart(2, "0")}-${lastModifiedDate.getDate().toString().padStart(2, "0")}`;
 
         const content = await file.current.arrayBuffer();
         if (isRIFFWave(new DataView(content, 0))) {
