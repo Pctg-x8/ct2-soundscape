@@ -96,9 +96,9 @@ export default function Page() {
         artist: "",
         genre: "",
         bpmRange: { min: 1, max: 1 },
-        year: 0,
-        month: 0,
-        day: 0,
+        year: 1,
+        month: 1,
+        day: 1,
         comment: "",
         dlCount: 0,
         downloadAllowed: false,
@@ -185,9 +185,9 @@ const EditDialog = forwardRef(function EditDialog(
                             id="time"
                             name="time"
                             type="date"
-                            defaultValue={`${editing.year}-${editing.month.toString().padStart(2, "0")}-${editing.day
+                            defaultValue={`${editing.year.toString().padStart(4, "0")}-${editing.month
                                 .toString()
-                                .padStart(2, "0")}`}
+                                .padStart(2, "0")}-${editing.day.toString().padStart(2, "0")}`}
                             required
                         />
                     </section>
