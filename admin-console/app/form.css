@@ -5,7 +5,12 @@
     flex-direction: column;
     gap: 1.2em;
 
-    & > fieldset {
+    &:has(> details) {
+        padding: 0;
+    }
+
+    & > fieldset,
+    & > details > fieldset {
         outline: none;
         border: none;
         margin: 0;

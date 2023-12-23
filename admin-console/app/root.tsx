@@ -29,6 +29,9 @@ export default function App() {
                         <li>
                             <Link to="/upload">ファイルアップロード</Link>
                         </li>
+                        <li>
+                            <Link to="/multiupload">複数ファイルアップロード</Link>
+                        </li>
                     </ul>
                 </nav>
                 <Outlet />

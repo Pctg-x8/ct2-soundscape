@@ -197,7 +197,7 @@ const EditDialog = forwardRef(function EditDialog(
                     </section>
                     <section>
                         <label htmlFor="file">ファイル（置き換える場合）</label>
-                        <input id="file" name="file" type="file" />
+                        <input id="file" name="file" type="file" accept="audio/*" />
                     </section>
                     <section>
                         <p className="labelLike">オプション</p>

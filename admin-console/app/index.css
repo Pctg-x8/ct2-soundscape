@@ -116,3 +116,43 @@ nav {
         }
     }
 }
+
+#MultiUploadDropArea {
+    border: dashed 2px #ccc;
+    background: #f0f0f0;
+    padding: 4rem;
+    margin: 1rem;
+    color: #aaa;
+    text-align: center;
+}
+
+#MultiUploadAddButton {
+    display: block;
+    width: 100%;
+}
+
+.multiUploadEntry {
+    border: solid 1px #ccc;
+
+    & > summary {
+        display: flex;
+        flex-direction: row;
+        align-items: baseline;
+        border-bottom: solid 1px #ccc;
+        cursor: pointer;
+        padding: 0.4rem;
+
+        & > p {
+            margin: 0;
+            padding: 0;
+        }
+
+        & .titles {
+            flex-grow: 1;
+        }
+
+        & .success {
+            color: #0c3;
+        }
+    }
+}

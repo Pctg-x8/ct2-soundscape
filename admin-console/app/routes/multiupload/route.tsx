@@ -1,4 +1,4 @@
-import { Form, useActionData, type MetaDescriptor, useNavigation } from "@remix-run/react";
+import { type MetaDescriptor, useFetcher } from "@remix-run/react";
 import {
     unstable_createMemoryUploadHandler,
     type ActionFunctionArgs,
@@ -6,11 +6,11 @@ import {
     json,
 } from "@remix-run/cloudflare";
 import { ContentFlags } from "soundscape-shared/src/schema";
-import { useRef } from "react";
+import { type DragEvent, useEffect, useRef, useState } from "react";
 import { RIFFChunk, isRIFFWave } from "src/riffReader";
 import { ID3v2Section, tryParseID3v1 } from "src/mp3Reader";
 
-export const meta: MetaDescriptor[] = [{ title: "Uploader - Soundscape (Admin Console)" }];
+export const meta: MetaDescriptor[] = [{ title: "Multiple Uploader - Soundscape (Admin Console)" }];
 
 export async function action({ request, context }: ActionFunctionArgs) {
     // TODO: 本来R2にはストリーミングputのAPIがあるんだけど、AsyncIterable->ReadableStreamの方法が存在しないので一旦メモリに貯める
@@ -39,10 +39,101 @@ export async function action({ request, context }: ActionFunctionArgs) {
     return json({ success: id.value });
 }
 
+async function recursiveQueryAllFiles(dir: FileSystemDirectoryEntry): Promise<File[]> {
+    const entries = await new Promise<FileSystemEntry[]>((resolve, reject) =>
+        dir.createReader().readEntries(resolve, reject)
+    );
+
+    return await Promise.all(
+        entries.map((e) => {
+            if (e.isFile) {
+                return new Promise<File>((resolve, reject) => (e as FileSystemFileEntry).file(resolve, reject)).then(
+                    (x) => [x]
+                );
+            }
+            if (e.isDirectory) {
+                return recursiveQueryAllFiles(e as FileSystemDirectoryEntry);
+            }
+
+            return Promise.resolve([]);
+        })
+    ).then((xs) => xs.flat());
+}
+
 export default function Page() {
-    const a = useActionData<typeof action>();
-    const navigation = useNavigation();
-    const isPending = navigation.state == "submitting";
+    const [initFiles, setInitFiles] = useState<(readonly [number, File | null])[]>([]);
+    const entryIdCounter = useRef(1);
+
+    const onDragOver = (e: DragEvent<HTMLElement>) => {
+        e.preventDefault();
+    };
+
+    const onDropFiles = async (e: DragEvent<HTMLElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (e.dataTransfer.files === null) return;
+        const files = await Promise.all(
+            Array.from(e.dataTransfer.items).map((x) => {
+                const e = x.webkitGetAsEntry();
+                if (!e) return Promise.resolve([]);
+
+                if (e.isDirectory) return recursiveQueryAllFiles(e as FileSystemDirectoryEntry);
+                if (e.isFile) {
+                    return new Promise<File>((resolve, reject) =>
+                        (e as FileSystemFileEntry).file(resolve, reject)
+                    ).then((x) => [x]);
+                }
+
+                return Promise.resolve([]);
+            })
+        ).then((xs) => xs.flat().filter((x) => x.type.startsWith("audio/")));
+
+        setInitFiles((fs) => [...fs, ...files.map((f, o) => [entryIdCounter.current + o, f] as const)]);
+        entryIdCounter.current += files.length;
+    };
+
+    const onAddClicked = () => {
+        setInitFiles((fs) => [...fs, [entryIdCounter.current, null] as const]);
+        entryIdCounter.current += 1;
+    };
+
+    const onCancel = (key: number) => () => {
+        setInitFiles((fs) => fs.filter(([k, _]) => k !== key));
+    };
+
+    return (
+        <article>
+            <h1>複数ファイルアップロード</h1>
+            <section id="MultiUploadDropArea" onDragOver={onDragOver} onDrop={onDropFiles}>
+                ここにファイルをドロップ
+            </section>
+            {initFiles.map(([key, f]) => (
+                <Entry key={key} identifier={key} initFile={f ?? undefined} onCancel={onCancel(key)} />
+            ))}
+            <button type="button" id="MultiUploadAddButton" onClick={onAddClicked}>
+                追加
+            </button>
+        </article>
+    );
+}
+
+function Entry({
+    identifier,
+    initFile,
+    onCancel,
+}: {
+    readonly identifier: number;
+    readonly initFile?: File;
+    readonly onCancel: () => void;
+}) {
+    const f = useFetcher<typeof action>();
+    const isPending = f.state == "submitting";
+
+    const formid = `uploadForm-${identifier}`;
+
+    const [title, setTitle] = useState("");
+    const [artist, setArtist] = useState("");
 
     const form = useRef<HTMLFormElement>(null);
     const file = useRef<File | null>(null);
@@ -63,6 +154,8 @@ export default function Page() {
         titleInput.value = "";
         artistInput.value = "";
         genreInput.value = "";
+        setTitle("");
+        setArtist("");
 
         const content = await file.current.arrayBuffer();
         if (isRIFFWave(new DataView(content, 0))) {
@@ -77,12 +170,14 @@ export default function Page() {
                     infoList.readAllEntries({
                         onName(value) {
                             titleInput.value = value;
+                            setTitle(value);
                         },
                         onGenre(value) {
                             genreInput.value = value;
                         },
                         onArtist(value) {
                             artistInput.value = value;
+                            setArtist(value);
                         },
                     });
                 },
@@ -95,6 +190,8 @@ export default function Page() {
             artistInput.value = id3v1.artist;
             // TODO: マッピングが謎
             genreInput.value = id3v1.genre.toString();
+            setTitle(id3v1.title);
+            setArtist(id3v1.artist);
         }
 
         ID3v2Section.tryRead(new DataView(content))?.readAllFrames({
@@ -107,9 +204,11 @@ export default function Page() {
             },
             onTitle(title) {
                 titleInput.value = title;
+                setTitle(title);
             },
             onArtist(artist) {
                 artistInput.value = artist;
+                setArtist(artist);
             },
             onGenre(genre) {
                 genreInput.value = genre;
@@ -117,18 +216,46 @@ export default function Page() {
         });
     };
 
+    useEffect(() => {
+        if (!initFile || !form.current) return;
+
+        // setting initial file selection via DataTransfer: https://pqina.nl/blog/set-value-to-file-input/
+        const dt = new DataTransfer();
+        dt.items.add(initFile);
+        (form.current["file"] as unknown as HTMLInputElement).files = dt.files;
+        file.current = initFile;
+
+        onAutoInputClicked();
+    }, [initFile]);
+
     return (
-        <article id="UploadForm">
-            <h1>ファイルアップロード</h1>
-            <Form method="post" encType="multipart/form-data" replace className="contentForm" ref={form}>
-                <fieldset disabled={isPending}>
+        <details className="multiUploadEntry">
+            <summary>
+                <p className="titles">
+                    {artist} - {title}
+                </p>
+                {f.data?.success ? (
+                    <p className="success">#{f.data.success}</p>
+                ) : (
+                    <>
+                        <button type="submit" className="positive" form={formid} disabled={isPending}>
+                            登録
+                        </button>
+                        <button type="button" onClick={onCancel} disabled={isPending}>
+                            登録せず削除
+                        </button>
+                    </>
+                )}
+            </summary>
+            <f.Form method="post" encType="multipart/form-data" className="contentForm" ref={form} id={formid}>
+                <fieldset disabled={isPending || (Boolean(f.data?.success) ?? false)}>
                     <section>
                         <label htmlFor="title">タイトル</label>
-                        <input id="title" name="title" required />
+                        <input id="title" name="title" onChange={(e) => setTitle(e.currentTarget.value)} required />
                     </section>
                     <section>
                         <label htmlFor="artist">アーティスト表記名</label>
-                        <input id="artist" name="artist" required />
+                        <input id="artist" name="artist" onChange={(e) => setArtist(e.currentTarget.value)} required />
                     </section>
                     <section>
                         <label htmlFor="genre">ジャンル</label>
@@ -188,16 +315,12 @@ export default function Page() {
                         </div>
                     </section>
                     <section className="buttons">
-                        <button type="submit" className="positive">
-                            追加
-                        </button>
                         <button type="reset" className="negative">
                             入力内容をリセット
                         </button>
                     </section>
                 </fieldset>
-                {a?.success ? <article className="successPopover">#{a.success} successfully added</article> : undefined}
-            </Form>
-        </article>
+            </f.Form>
+        </details>
     );
 }
