@@ -113,7 +113,9 @@ function readID3v2Text(content: DataView): string {
         case 3:
             return new TextDecoder("utf-8").decode(body);
         default:
-            return new TextDecoder("iso8859-1").decode(body);
+            // Note: ほんとうはこっちが正解（Windowsはここで仕様無視してshift-jisを入れてくる）
+            // return new TextDecoder("iso8859-1").decode(body);
+            return new TextDecoder("shift-jis").decode(body);
     }
 }
 

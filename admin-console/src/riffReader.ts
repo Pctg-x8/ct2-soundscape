@@ -110,11 +110,10 @@ export class RIFFInfoList {
      */
     readEntryAt(offset: number): [string, string, number] {
         const byteLength = this.contentView.getUint32(offset + 4, true);
-        const value = String.fromCharCode(
-            ...Array.from({ length: byteLength })
-                .map((_, o) => this.contentView.getUint8(offset + 8 + o))
-                .filter((x) => x != 0)
-        );
+        const valueBytes = Array.from({ length: byteLength })
+            .map((_, o) => this.contentView.getUint8(offset + 8 + o))
+            .filter((x) => x != 0);
+        const value = new TextDecoder("shift-jis").decode(new Uint8Array(valueBytes));
 
         return [unFourccLE(this.contentView.getUint32(offset + 0, true)), value, byteLength + 8];
     }

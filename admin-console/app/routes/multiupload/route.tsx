@@ -7,8 +7,7 @@ import {
 } from "@remix-run/cloudflare";
 import { ContentFlags } from "soundscape-shared/src/schema";
 import { type DragEvent, useEffect, useRef, useState } from "react";
-import { RIFFChunk, isRIFFWave } from "src/riffReader";
-import { ID3v2Section, tryParseID3v1 } from "src/mp3Reader";
+import { readFileMetadata } from "src/contentReader";
 
 export const meta: MetaDescriptor[] = [{ title: "Multiple Uploader - Soundscape (Admin Console)" }];
 
@@ -146,72 +145,29 @@ function Entry({
             genreInput = formRef["genre"] as unknown as HTMLInputElement,
             timeInput = formRef["time"] as unknown as HTMLInputElement;
 
-        const lastModifiedDate = new Date(file.current.lastModified);
-        timeInput.value = `${lastModifiedDate.getFullYear()}-${(lastModifiedDate.getMonth() + 1)
-            .toString()
-            .padStart(2, "0")}-${lastModifiedDate.getDate().toString().padStart(2, "0")}`;
-
         titleInput.value = "";
         artistInput.value = "";
         genreInput.value = "";
         setTitle("");
         setArtist("");
 
-        const content = await file.current.arrayBuffer();
-        if (isRIFFWave(new DataView(content, 0))) {
-            RIFFChunk.readAll(new DataView(content, 12), {
-                onUnknown(c) {
-                    console.debug("unknown chunk", c.id);
-                },
-                onList(c) {
-                    const infoList = c.tryConvertToInfoList();
-                    if (!infoList) return;
-
-                    infoList.readAllEntries({
-                        onName(value) {
-                            titleInput.value = value;
-                            setTitle(value);
-                        },
-                        onGenre(value) {
-                            genreInput.value = value;
-                        },
-                        onArtist(value) {
-                            artistInput.value = value;
-                            setArtist(value);
-                        },
-                    });
-                },
-            });
-        }
-
-        const id3v1 = tryParseID3v1(new DataView(content));
-        if (id3v1) {
-            titleInput.value = id3v1.title;
-            artistInput.value = id3v1.artist;
-            // TODO: マッピングが謎
-            genreInput.value = id3v1.genre.toString();
-            setTitle(id3v1.title);
-            setArtist(id3v1.artist);
-        }
-
-        ID3v2Section.tryRead(new DataView(content))?.readAllFrames({
-            onUnknown(id, flags, value) {
-                console.debug(
-                    "unknown id3v2 tag",
-                    id,
-                    Array.from({ length: value.byteLength }).map((_, o) => value.getUint8(o))
-                );
+        await readFileMetadata(file.current, {
+            onLastModifiedDate(d) {
+                timeInput.value = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d
+                    .getDate()
+                    .toString()
+                    .padStart(2, "0")}`;
             },
-            onTitle(title) {
-                titleInput.value = title;
-                setTitle(title);
+            onTitle(value) {
+                titleInput.value = value;
+                setTitle(value);
             },
-            onArtist(artist) {
-                artistInput.value = artist;
-                setArtist(artist);
+            onArtist(value) {
+                artistInput.value = value;
+                setArtist(value);
             },
-            onGenre(genre) {
-                genreInput.value = genre;
+            onGenre(value) {
+                genreInput.value = value;
             },
         });
     };
