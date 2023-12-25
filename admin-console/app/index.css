@@ -126,6 +126,12 @@ nav {
     text-align: center;
 }
 
+#MultiUploadSubmitAllButton {
+    display: block;
+    margin: 1rem;
+    margin-left: auto;
+}
+
 #MultiUploadAddButton {
     display: block;
     width: 100%;

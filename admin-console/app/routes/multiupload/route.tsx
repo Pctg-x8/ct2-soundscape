@@ -6,7 +6,7 @@ import {
     json,
 } from "@remix-run/cloudflare";
 import { ContentFlags } from "soundscape-shared/src/schema";
-import { type DragEvent, useEffect, useRef, useState } from "react";
+import { type DragEvent, useEffect, useRef, useState, useCallback } from "react";
 import { readFileMetadata } from "src/contentReader";
 
 export const meta: MetaDescriptor[] = [{ title: "Multiple Uploader - Soundscape (Admin Console)" }];
@@ -62,6 +62,7 @@ async function recursiveQueryAllFiles(dir: FileSystemDirectoryEntry): Promise<Fi
 export default function Page() {
     const [initFiles, setInitFiles] = useState<(readonly [number, File | null])[]>([]);
     const entryIdCounter = useRef(1);
+    const submissionOps = useRef<{ [key: number]: () => void }>({});
 
     const onDragOver = (e: DragEvent<HTMLElement>) => {
         e.preventDefault();
@@ -101,14 +102,37 @@ export default function Page() {
         setInitFiles((fs) => fs.filter(([k, _]) => k !== key));
     };
 
+    const registerSubmission = useCallback((identifier: number, submit: () => void) => {
+        submissionOps.current[identifier] = submit;
+    }, []);
+    const unregisterSubmission = useCallback((identifier: number) => {
+        delete submissionOps.current[identifier];
+    }, []);
+
+    const onSubmitAllClicked = () => {
+        for (const op of Object.values(submissionOps.current)) {
+            op();
+        }
+    };
+
     return (
         <article>
             <h1>複数ファイルアップロード</h1>
             <section id="MultiUploadDropArea" onDragOver={onDragOver} onDrop={onDropFiles}>
                 ここにファイルをドロップ
             </section>
+            <button type="button" id="MultiUploadSubmitAllButton" onClick={onSubmitAllClicked}>
+                すべて登録
+            </button>
             {initFiles.map(([key, f]) => (
-                <Entry key={key} identifier={key} initFile={f ?? undefined} onCancel={onCancel(key)} />
+                <Entry
+                    key={key}
+                    identifier={key}
+                    initFile={f ?? undefined}
+                    onCancel={onCancel(key)}
+                    registerSubmission={registerSubmission}
+                    unregisterSubmission={unregisterSubmission}
+                />
             ))}
             <button type="button" id="MultiUploadAddButton" onClick={onAddClicked}>
                 追加
@@ -121,10 +145,14 @@ function Entry({
     identifier,
     initFile,
     onCancel,
+    registerSubmission,
+    unregisterSubmission,
 }: {
     readonly identifier: number;
     readonly initFile?: File;
     readonly onCancel: () => void;
+    readonly registerSubmission: (identifier: number, submit: () => void) => void;
+    readonly unregisterSubmission: (identifier: number) => void;
 }) {
     const f = useFetcher<typeof action>();
     const isPending = f.state == "submitting";
@@ -183,6 +211,18 @@ function Entry({
 
         onAutoInputClicked();
     }, [initFile]);
+
+    // registers submission operation to container component
+    useEffect(() => {
+        registerSubmission(identifier, () => {
+            if (f.data !== undefined) return;
+            if (f.state !== "idle") return;
+
+            form.current?.requestSubmit();
+        });
+
+        return () => unregisterSubmission(identifier);
+    }, [identifier, registerSubmission, unregisterSubmission, f]);
 
     return (
         <details className="multiUploadEntry">
