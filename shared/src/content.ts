@@ -1,12 +1,16 @@
 // content model
 
 import { D1Database, R2Bucket } from "@cloudflare/workers-types";
-import { ContentFlags, details as detailsTable } from "./schema";
+import ContentFlags from "./valueObjects/contentFlags";
+import { License } from "./valueObjects/license";
+import * as schema from "./schema";
 import { drizzle } from "drizzle-orm/d1";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { skip32 } from "./skip32";
 // @ts-ignore なぜか定義が見つけられないので一旦封じる
 import { AwsClient } from "aws4fetch";
+import { unwrapNullishOr } from "./utils/nullish";
+import { _let } from "./utils";
 
 export interface ContentIdObfuscator {
     obfuscate(internalId: number): number;
@@ -64,6 +68,7 @@ export type ContentDetails = {
     readonly dateJst: Date;
     readonly flags: ContentFlags;
     readonly downloadCount: number;
+    readonly license: License.Type;
 };
 export type IdentifiedContentDetails = ContentDetails & { readonly id: ContentId.External };
 
@@ -108,41 +113,37 @@ export class CloudflareLocalContentReadonlyRepository implements ContentReadonly
         protected readonly objectStoreMountPath: string
     ) {}
 
+    protected connectInfoStore() {
+        return drizzle(this.infoStore, { schema });
+    }
+
+    private detailsFromDBRow(row: schema.Details): ContentDetails {
+        return {
+            ...row,
+            bpmRange: { min: row.minBPM, max: row.maxBPM },
+            license: unwrapNullishOr(License.fromDBValues(row.licenseType, row.licenseText), () => {
+                throw new Error("invalid license type");
+            }),
+        };
+    }
+
     get allDetails(): Promise<IdentifiedContentDetails[]> {
-        return drizzle(this.infoStore)
-            .select()
-            .from(detailsTable)
-            .all()
+        return this.connectInfoStore()
+            .query.details.findMany()
             .then((xs) =>
-                xs.map((x) => ({
-                    id: new ContentId.Internal(x.id).toExternal(this.idObfuscator),
-                    title: x.title,
-                    artist: x.artist,
-                    genre: x.genre,
-                    bpmRange: { min: x.minBPM, max: x.maxBPM },
-                    comment: x.comment,
-                    dateJst: x.dateJst,
-                    flags: x.flags,
-                    downloadCount: x.downloadCount,
+                xs.map((r) => ({
+                    ...this.detailsFromDBRow(r),
+                    id: new ContentId.Internal(r.id).toExternal(this.idObfuscator),
                 }))
             );
     }
 
-    async get(id: ContentId.Untyped): Promise<ContentDetails | undefined> {
-        return await drizzle(this.infoStore)
-            .select({
-                title: detailsTable.title,
-                artist: detailsTable.artist,
-                genre: detailsTable.genre,
-                bpmRange: { min: detailsTable.minBPM, max: detailsTable.maxBPM },
-                comment: detailsTable.comment,
-                dateJst: detailsTable.dateJst,
-                flags: detailsTable.flags,
-                downloadCount: detailsTable.downloadCount,
+    get(id: ContentId.Untyped): Promise<ContentDetails | undefined> {
+        return this.connectInfoStore()
+            .query.details.findFirst({
+                where: eq(schema.details.id, id.toInternal(this.idObfuscator).value),
             })
-            .from(detailsTable)
-            .where(eq(detailsTable.id, id.toInternal(this.idObfuscator).value))
-            .get();
+            .then((r) => (r === undefined ? undefined : this.detailsFromDBRow(r)));
     }
 
     async getContentUrl(id: ContentId.Untyped): Promise<string | undefined> {
@@ -162,10 +163,11 @@ export class CloudflareLocalContentRepository
         contentType: string,
         content: File | ReadableStream
     ): Promise<ContentId.External> {
-        const db = drizzle(this.infoStore);
+        const db = this.connectInfoStore();
+        const [licenseType, licenseText] = License.toDBValues(details.license);
 
         const [inserted] = await db
-            .insert(detailsTable)
+            .insert(schema.details)
             .values([
                 {
                     title: details.title,
@@ -176,17 +178,18 @@ export class CloudflareLocalContentRepository
                     comment: details.comment,
                     dateJst: details.dateJst,
                     flags: details.flags,
+                    licenseType,
+                    licenseText,
                 },
             ])
-            .returning({ id: detailsTable.id })
-            .execute();
+            .returning({ id: schema.details.id });
 
         try {
             await this.objectStore.put(inserted.id.toString(), content, {
                 httpMetadata: new Headers({ "Content-Type": contentType }),
             });
         } catch (e) {
-            await db.delete(detailsTable).where(eq(detailsTable.id, inserted.id)).execute();
+            await db.delete(schema.details).where(eq(schema.details.id, inserted.id)).execute();
             throw e;
         }
 
@@ -199,15 +202,27 @@ export class CloudflareLocalContentRepository
         contentType?: string,
         content?: File | ReadableStream
     ): Promise<void> {
-        const db = drizzle(this.infoStore);
+        const db = this.connectInfoStore();
         const internalId = id.toInternal(this.idObfuscator).value;
 
         const [oldContent] = await db
-            .update(detailsTable)
-            .set(details)
-            .where(eq(detailsTable.id, internalId))
-            .returning()
-            .execute();
+            .update(schema.details)
+            .set({
+                title: details.title,
+                artist: details.artist,
+                genre: details.genre,
+                minBPM: details.bpmRange?.min,
+                maxBPM: details.bpmRange?.max,
+                comment: details.comment,
+                dateJst: details.dateJst,
+                flags: details.flags,
+                downloadCount: details.downloadCount,
+                ...(details.license === undefined
+                    ? {}
+                    : _let(License.toDBValues(details.license), ([ty, tx]) => ({ licenseType: ty, licenseText: tx }))),
+            })
+            .where(eq(schema.details.id, internalId))
+            .returning();
 
         try {
             if (content !== undefined && content !== null) {
@@ -216,24 +231,23 @@ export class CloudflareLocalContentRepository
                 });
             }
         } catch (e) {
-            await db.update(detailsTable).set(oldContent).where(eq(detailsTable.id, internalId)).execute();
+            await db.update(schema.details).set(oldContent).where(eq(schema.details.id, internalId));
             throw e;
         }
     }
 
     async delete(id: ContentId.Untyped): Promise<void> {
-        const db = drizzle(this.infoStore);
+        const db = this.connectInfoStore();
 
         const [recovered] = await db
-            .delete(detailsTable)
-            .where(eq(detailsTable.id, id.toInternal(this.idObfuscator).value))
-            .returning()
-            .execute();
+            .delete(schema.details)
+            .where(eq(schema.details.id, id.toInternal(this.idObfuscator).value))
+            .returning();
 
         try {
             await this.objectStore.delete(id.toString());
         } catch (e) {
-            await db.insert(detailsTable).values([recovered]).execute();
+            await db.insert(schema.details).values([recovered]);
             throw e;
         }
     }
@@ -248,41 +262,37 @@ export class CloudflareContentReadonlyRepository implements ContentReadonlyRepos
         protected readonly objectStoreS3Endpoint: URL
     ) {}
 
+    protected connectInfoStore() {
+        return drizzle(this.infoStore, { schema });
+    }
+
+    private detailsFromDBRow(row: schema.Details): ContentDetails {
+        return {
+            ...row,
+            bpmRange: { min: row.minBPM, max: row.maxBPM },
+            license: unwrapNullishOr(License.fromDBValues(row.licenseType, row.licenseText), () => {
+                throw new Error("invalid license type");
+            }),
+        };
+    }
+
     get allDetails(): Promise<IdentifiedContentDetails[]> {
-        return drizzle(this.infoStore)
-            .select()
-            .from(detailsTable)
-            .all()
+        return this.connectInfoStore()
+            .query.details.findMany()
             .then((xs) =>
-                xs.map((x) => ({
-                    id: new ContentId.Internal(x.id).toExternal(this.idObfuscator),
-                    title: x.title,
-                    artist: x.artist,
-                    genre: x.genre,
-                    bpmRange: { min: x.minBPM, max: x.maxBPM },
-                    comment: x.comment,
-                    dateJst: x.dateJst,
-                    flags: x.flags,
-                    downloadCount: x.downloadCount,
+                xs.map((r) => ({
+                    ...this.detailsFromDBRow(r),
+                    id: new ContentId.Internal(r.id).toExternal(this.idObfuscator),
                 }))
             );
     }
 
-    async get(id: ContentId.Untyped): Promise<ContentDetails | undefined> {
-        return await drizzle(this.infoStore)
-            .select({
-                title: detailsTable.title,
-                artist: detailsTable.artist,
-                genre: detailsTable.genre,
-                bpmRange: { min: detailsTable.minBPM, max: detailsTable.maxBPM },
-                comment: detailsTable.comment,
-                dateJst: detailsTable.dateJst,
-                flags: detailsTable.flags,
-                downloadCount: detailsTable.downloadCount,
+    get(id: ContentId.Untyped): Promise<ContentDetails | undefined> {
+        return this.connectInfoStore()
+            .query.details.findFirst({
+                where: eq(schema.details.id, id.toInternal(this.idObfuscator).value),
             })
-            .from(detailsTable)
-            .where(eq(detailsTable.id, id.toInternal(this.idObfuscator).value))
-            .get();
+            .then((x) => (x === undefined ? undefined : this.detailsFromDBRow(x)));
     }
 
     async getContentUrl(id: ContentId.Untyped): Promise<string | undefined> {
@@ -303,10 +313,11 @@ export class CloudflareContentRepository extends CloudflareContentReadonlyReposi
         contentType: string,
         content: File | ReadableStream
     ): Promise<ContentId.External> {
-        const db = drizzle(this.infoStore);
+        const db = this.connectInfoStore();
+        const [licenseType, licenseText] = License.toDBValues(details.license);
 
         const [inserted] = await db
-            .insert(detailsTable)
+            .insert(schema.details)
             .values([
                 {
                     title: details.title,
@@ -317,17 +328,18 @@ export class CloudflareContentRepository extends CloudflareContentReadonlyReposi
                     comment: details.comment,
                     dateJst: details.dateJst,
                     flags: details.flags,
+                    licenseType,
+                    licenseText,
                 },
             ])
-            .returning({ id: detailsTable.id })
-            .execute();
+            .returning({ id: schema.details.id });
 
         try {
             await this.objectStore.put(inserted.id.toString(), content, {
                 httpMetadata: new Headers({ "Content-Type": contentType }),
             });
         } catch (e) {
-            await db.delete(detailsTable).where(eq(detailsTable.id, inserted.id)).execute();
+            await db.delete(schema.details).where(eq(schema.details.id, inserted.id));
             throw e;
         }
 
@@ -340,15 +352,27 @@ export class CloudflareContentRepository extends CloudflareContentReadonlyReposi
         contentType?: string,
         content?: File | ReadableStream
     ): Promise<void> {
-        const db = drizzle(this.infoStore);
+        const db = this.connectInfoStore();
         const internalId = id.toInternal(this.idObfuscator).value;
 
         const [oldContent] = await db
-            .update(detailsTable)
-            .set(details)
-            .where(eq(detailsTable.id, internalId))
-            .returning()
-            .execute();
+            .update(schema.details)
+            .set({
+                title: details.title,
+                artist: details.artist,
+                genre: details.genre,
+                minBPM: details.bpmRange?.min,
+                maxBPM: details.bpmRange?.max,
+                comment: details.comment,
+                dateJst: details.dateJst,
+                flags: details.flags,
+                downloadCount: details.downloadCount,
+                ...(details.license === undefined
+                    ? {}
+                    : _let(License.toDBValues(details.license), ([ty, tx]) => ({ licenseType: ty, licenseText: tx }))),
+            })
+            .where(eq(schema.details.id, internalId))
+            .returning();
 
         try {
             if (content !== undefined && content !== null) {
@@ -357,24 +381,23 @@ export class CloudflareContentRepository extends CloudflareContentReadonlyReposi
                 });
             }
         } catch (e) {
-            await db.update(detailsTable).set(oldContent).where(eq(detailsTable.id, internalId)).execute();
+            await db.update(schema.details).set(oldContent).where(eq(schema.details.id, internalId));
             throw e;
         }
     }
 
     async delete(id: ContentId.Untyped): Promise<void> {
-        const db = drizzle(this.infoStore);
+        const db = this.connectInfoStore();
 
         const [recovered] = await db
-            .delete(detailsTable)
-            .where(eq(detailsTable.id, id.toInternal(this.idObfuscator).value))
-            .returning()
-            .execute();
+            .delete(schema.details)
+            .where(eq(schema.details.id, id.toInternal(this.idObfuscator).value))
+            .returning();
 
         try {
             await this.objectStore.delete(id.toString());
         } catch (e) {
-            await db.insert(detailsTable).values([recovered]).execute();
+            await db.insert(schema.details).values([recovered]);
             throw e;
         }
     }

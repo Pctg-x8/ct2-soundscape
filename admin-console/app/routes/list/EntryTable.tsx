@@ -1,6 +1,7 @@
 import { useFetcher } from "@remix-run/react";
 import type { MouseEventHandler, FormEvent } from "react";
 import type { NumRange } from "soundscape-shared/src/content";
+import { License } from "soundscape-shared/src/valueObjects/license";
 
 export type EntryTableRow = {
     readonly id: number;
@@ -13,6 +14,7 @@ export type EntryTableRow = {
     readonly day: number;
     readonly comment: string;
     readonly dlCount: number;
+    readonly license: License.Type;
     readonly downloadAllowed: boolean;
 };
 
@@ -43,6 +45,7 @@ export default function EntryTable({
                     <th>アーティスト表記名</th>
                     <th>ジャンル</th>
                     <th>制作日</th>
+                    <th>ライセンス</th>
                     <th>DLCount</th>
                     <th>Flags</th>
                     <th></th>
@@ -59,6 +62,7 @@ export default function EntryTable({
                             {x.year.toString()}/{x.month.toString().padStart(2, "0")}/
                             {x.day.toString().padStart(2, "0")}
                         </td>
+                        <td>{licenseText(x.license)}</td>
                         <td className="num">{x.dlCount}</td>
                         <td className="center">{x.downloadAllowed ? "DL可" : ""}</td>
                         <td className="actionButtons">
@@ -76,4 +80,25 @@ export default function EntryTable({
             </tbody>
         </table>
     );
+}
+
+function licenseText(l: License.Type): string {
+    switch (l) {
+        case License.PublicDomain:
+            return "CC0";
+        case License.CreativeCommons4.BY:
+            return "CC-BY";
+        case License.CreativeCommons4.BY_SA:
+            return "CC-BY-SA";
+        case License.CreativeCommons4.BY_NC:
+            return "CC-BY-NC";
+        case License.CreativeCommons4.BY_NC_SA:
+            return "CC-BY-NC-SA";
+        case License.CreativeCommons4.BY_NC_ND:
+            return "CC-BY-NC-ND";
+        case License.CreativeCommons4.BY_ND:
+            return "CC-BY-ND";
+        default:
+            return l;
+    }
 }

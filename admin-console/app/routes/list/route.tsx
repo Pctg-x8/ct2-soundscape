@@ -17,8 +17,9 @@ import type { ForwardedRef, MouseEvent } from "react";
 import "./style.css";
 import EntryTable, { type EntryTableRow } from "./EntryTable";
 import type { ContentDetails } from "soundscape-shared/src/content";
-import { ContentFlags } from "soundscape-shared/src/schema";
+import ContentFlags from "soundscape-shared/src/valueObjects/contentFlags";
 import { ContentId } from "soundscape-shared/src/content";
+import { License } from "soundscape-shared/src/valueObjects/license";
 
 export const meta: MetaDescriptor[] = [{ title: "Content List - Soundscape (Admin Console)" }];
 
@@ -36,6 +37,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
             day: x.dateJst.getDate(),
             comment: x.comment,
             dlCount: x.downloadCount,
+            license: x.license,
             downloadAllowed: x.flags.downloadAllowed,
         }))
     );
@@ -101,6 +103,7 @@ export default function Page() {
         day: 1,
         comment: "",
         dlCount: 0,
+        license: License.PublicDomain,
         downloadAllowed: false,
     });
     const editDialogRef = useRef<HTMLDialogElement>(null);

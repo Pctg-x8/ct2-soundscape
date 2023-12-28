@@ -5,9 +5,10 @@ import {
     unstable_parseMultipartFormData,
     json,
 } from "@remix-run/cloudflare";
-import { ContentFlags } from "soundscape-shared/src/schema";
+import ContentFlags from "soundscape-shared/src/valueObjects/contentFlags";
 import { useRef } from "react";
 import { readFileMetadata } from "src/contentReader";
+import { License } from "soundscape-shared/src/valueObjects/license";
 
 export const meta: MetaDescriptor[] = [{ title: "Uploader - Soundscape (Admin Console)" }];
 
@@ -30,6 +31,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
             flags: ContentFlags.fromBooleans({
                 allowDownload: body.get("enableDownloads") === "on",
             }),
+            // TODO: license input
+            license: License.PublicDomain,
         },
         file.type,
         file
