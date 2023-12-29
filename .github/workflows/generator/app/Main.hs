@@ -64,6 +64,7 @@ targets :: [(FilePath, GHA.Workflow)]
 targets =
   [ ( "master-auto-deployment.yml",
       GHA.namedAs "Master Deployment"
+        $ GHA.concurrentPolicy (GHA.ConcurrentCancelledGroup "master-auto-deployment")
         $ GHA.buildWorkflow
           [ GHA.workflowJob "admin-console" adminConsoleDeploymentJob,
             GHA.workflowJob "app" appDeploymentJob
