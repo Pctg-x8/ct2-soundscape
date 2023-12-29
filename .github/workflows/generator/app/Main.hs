@@ -23,7 +23,7 @@ withDeploymentEnvironments =
 adminConsoleDeploymentJob :: GHA.Job
 adminConsoleDeploymentJob =
   GHA.runInEnvironment (GHA.RepositoryEnvironment "prod:admin-console") $
-    GHA.namedAs "Deployment" $
+    GHA.namedAs "Deployment(Admin Console)" $
       GHA.job
         [ GHA.namedAs "Checking out" $ Checkout.step Nothing,
           GHA.namedAs "Setup PNPM" $
@@ -36,7 +36,7 @@ adminConsoleDeploymentJob =
 appDeploymentJob :: GHA.Job
 appDeploymentJob =
   GHA.runInEnvironment (GHA.RepositoryEnvironment "prod:app") $
-    GHA.namedAs "Deployment" $
+    GHA.namedAs "Deployment(App)" $
       GHA.job
         [ GHA.namedAs "Checking out" $ Checkout.step Nothing,
           GHA.namedAs "Setup PNPM" $
