@@ -15,16 +15,20 @@
     "@remix-run/css-bundle": "^2.3.1",
     "@remix-run/react": "^2.3.1",
     "@remix-run/server-runtime": "^2.3.1",
+    "cookie": "^0.6.0",
     "isbot": "latest",
+    "jwks-rsa": "^3.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "soundscape-shared": "workspace:^"
+    "soundscape-shared": "workspace:^",
+    "zod": "^3.22.4"
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "devDependencies": {
     "@remix-run/dev": "^2.3.1",
+    "@types/cookie": "^0.6.0",
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
     "autoprefixer": "^10.4.16",
