@@ -1,6 +1,7 @@
 {
   "name": "ct2-soundscape",
   "type": "module",
+  "packageManager": "pnpm@8.6.6",
   "scripts": {
     "app": "pnpm -C ./app",
     "admin-console": "pnpm -C ./admin-console",
