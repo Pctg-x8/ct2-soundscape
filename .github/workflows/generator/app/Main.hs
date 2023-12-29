@@ -16,6 +16,12 @@ secretCloudflareApiToken = GHA.mkExpression "secrets.CLOUDFLARE_API_TOKEN"
 secretCloudflareAccountID :: String
 secretCloudflareAccountID = GHA.mkExpression "secrets.CLOUDFLARE_ACCOUNT_ID"
 
+adminConsoleProjectName :: String
+adminConsoleProjectName = "ct2-soundscape-admin-console"
+
+appProjectName :: String
+appProjectName = "app"
+
 withDeploymentEnvironments :: GHA.Step -> GHA.Step
 withDeploymentEnvironments =
   GHA.env "CLOUDFLARE_ACCOUNT_ID" secretCloudflareAccountID . GHA.env "CLOUDFLARE_API_TOKEN" secretCloudflareApiToken
@@ -28,7 +34,15 @@ adminConsoleDeploymentJob =
         [ GHA.namedAs "Checking out" $ Checkout.step Nothing,
           GHA.namedAs "Setup PNPM" $
             SetupPNPM.step
-              [ SetupPNPM.runInstallOption {SetupPNPM.runInstallArgs = ["--frozen-lockfile", "-F", "shared", "-F", "admin-console"]}
+              [ SetupPNPM.runInstallOption
+                  { SetupPNPM.runInstallArgs =
+                      [ "--frozen-lockfile",
+                        "-F",
+                        "shared",
+                        "-F",
+                        adminConsoleProjectName
+                      ]
+                  }
               ],
           GHA.namedAs "deploy" $ GHA.workAt "admin-console" $ withDeploymentEnvironments $ GHA.runStep "pnpm run deploy"
         ]
@@ -41,7 +55,7 @@ appDeploymentJob =
         [ GHA.namedAs "Checking out" $ Checkout.step Nothing,
           GHA.namedAs "Setup PNPM" $
             SetupPNPM.step
-              [ SetupPNPM.runInstallOption {SetupPNPM.runInstallArgs = ["--frozen-lockfile", "-F", "shared", "-F", "app"]}
+              [ SetupPNPM.runInstallOption {SetupPNPM.runInstallArgs = ["--frozen-lockfile", "-F", "shared", "-F", appProjectName]}
               ],
           GHA.namedAs "deploy" $ GHA.workAt "app" $ withDeploymentEnvironments $ GHA.runStep "pnpm run deploy"
         ]
