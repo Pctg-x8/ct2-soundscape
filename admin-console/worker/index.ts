@@ -39,16 +39,35 @@ type FetchEnv = {
     readonly CLOUDFLARE_ACCESS_APP_ID: string;
 };
 
+function makeAuthenticator(env: FetchEnv): Authenticator {
+    if (process.env.NODE_ENV === "development") {
+        return new PassthroughAuthenticator();
+    }
+
+    return new CloudflareAccessJWTAuthenticator(
+        new URL("https://ct2.cloudflareaccess.com/"),
+        env.CLOUDFLARE_ACCESS_APP_ID,
+        [new EmailAllowanceAuthenticator(["Syn.Tri.Naga@gmail.com"])]
+    );
+}
+
+async function serveStaticFiles(req: Request, env: FetchEnv, ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(req.url);
+    const ttl = url.pathname.startsWith("/build/") ? 60 * 60 * 24 * 365 : 60 * 5;
+
+    return await getAssetFromKV(
+        { request: req, waitUntil: ctx.waitUntil.bind(ctx) },
+        {
+            ASSET_NAMESPACE: env.__STATIC_CONTENT,
+            ASSET_MANIFEST: MANIFEST,
+            cacheControl: { browserTTL: ttl, edgeTTL: ttl },
+        }
+    );
+}
+
 export default {
     async fetch(req: Request, env: FetchEnv, ctx: ExecutionContext): Promise<Response> {
-        const authenticator: Authenticator =
-            process.env.NODE_ENV === "development"
-                ? new PassthroughAuthenticator()
-                : new CloudflareAccessJWTAuthenticator(
-                      new URL("https://ct2.cloudflareaccess.com/"),
-                      env.CLOUDFLARE_ACCESS_APP_ID,
-                      [new EmailAllowanceAuthenticator(["Syn.Tri.Naga@gmail.com"])]
-                  );
+        const authenticator = makeAuthenticator(env);
 
         try {
             authenticator.authenticate(req);
@@ -58,17 +77,7 @@ export default {
         }
 
         try {
-            const url = new URL(req.url);
-            const ttl = url.pathname.startsWith("/build/") ? 60 * 60 * 24 * 365 : 60 * 5;
-
-            return await getAssetFromKV(
-                { request: req, waitUntil: ctx.waitUntil.bind(ctx) },
-                {
-                    ASSET_NAMESPACE: env.__STATIC_CONTENT,
-                    ASSET_MANIFEST: MANIFEST,
-                    cacheControl: { browserTTL: ttl, edgeTTL: ttl },
-                }
-            );
+            return await serveStaticFiles(req, env, ctx);
         } catch (e) {}
 
         if (process.env.NODE_ENV === "development") {
