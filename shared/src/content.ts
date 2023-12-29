@@ -297,7 +297,7 @@ export class CloudflareContentReadonlyRepository implements ContentReadonlyRepos
 
     async getContentUrl(id: ContentId.Untyped): Promise<string | undefined> {
         const url = new URL(this.objectStoreS3Endpoint);
-        url.pathname = id.toInternal(this.idObfuscator).value.toString();
+        url.pathname = `soundscape/${id.toInternal(this.idObfuscator).value}`;
         // available for 1 hour
         url.searchParams.set("X-Amz-Expires", "3600");
 
