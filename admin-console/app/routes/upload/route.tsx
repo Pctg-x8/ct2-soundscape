@@ -6,7 +6,7 @@ import {
     json,
 } from "@remix-run/cloudflare";
 import ContentFlags from "soundscape-shared/src/valueObjects/contentFlags";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { readFileMetadata } from "src/contentReader";
 import { License } from "soundscape-shared/src/valueObjects/license";
 
@@ -20,6 +20,25 @@ export async function action({ request, context }: ActionFunctionArgs) {
     );
     const file = body.get("file")! as File;
 
+    const licenseType = Number(body.get("licenseType"));
+    let license: License.Type;
+    switch (licenseType) {
+        case License.PublicDomain:
+        case License.CreativeCommons4.BY:
+            case License.CreativeCommons4.BY_SA:
+                case License.CreativeCommons4.BY_NC:
+                    case License.CreativeCommons4.BY_ND:
+                        case License.CreativeCommons4.BY_NC_SA:
+                            case License.CreativeCommons4.BY_NC_ND:
+            license = licenseType;
+            break;
+        case 999:
+            license = body.get("licenseText")?.toString() ?? "";
+            break;
+        default:
+            throw new Error("invalid license input");
+    }
+
     const id = await context.contentRepository.add(
         {
             title: String(body.get("title")),
@@ -31,8 +50,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
             flags: ContentFlags.fromBooleans({
                 allowDownload: body.get("enableDownloads") === "on",
             }),
-            // TODO: license input
-            license: License.PublicDomain,
+            license,
         },
         file.type,
         file
@@ -46,6 +64,7 @@ export default function Page() {
     const navigation = useNavigation();
     const isPending = navigation.state == "submitting";
 
+    const [currentLicenseSelection, setCurrentLicenseSelection] = useState<number>(0);
     const form = useRef<HTMLFormElement>(null);
     const file = useRef<File | null>(null);
     const onAutoInputClicked = async () => {
@@ -142,6 +161,22 @@ export default function Page() {
                         <button type="button" onClick={onAutoInputClicked}>
                             ファイルから自動入力
                         </button>
+                    </section>
+                    <section>
+                        <label htmlFor="licenseType">ライセンス形態</label>
+                        <div className="licenseInputs">
+                            <select id="licenseType" name="licenseType" onChange={e => setCurrentLicenseSelection(Number(e.currentTarget.value))}>
+                                <option value={License.PublicDomain}>CC0</option>
+                                <option value={License.CreativeCommons4.BY}>CC-BY</option>
+                                <option value={License.CreativeCommons4.BY_SA}>CC-BY-SA</option>
+                                <option value={License.CreativeCommons4.BY_NC}>CC-BY-NC</option>
+                                <option value={License.CreativeCommons4.BY_NC_SA}>CC-BY-NC-SA</option>
+                                <option value={License.CreativeCommons4.BY_NC_ND}>CC-BY-NC-ND</option>
+                                <option value={License.CreativeCommons4.BY_ND}>CC-BY-ND</option>
+                                <option value={999}>その他</option>
+                            </select>
+                            <input name="licenseText" disabled={currentLicenseSelection !== 999} />
+                        </div>
                     </section>
                     <section>
                         <p className="labelLike">オプション</p>
