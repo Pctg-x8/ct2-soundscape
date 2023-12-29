@@ -1,6 +1,10 @@
-name = "soundscape"
+name = "soundscape-admin"
 main = "./worker/index.ts"
 compatibility_date = "2023-10-30"
+
+[[routes]]
+pattern = "ac.sound.ct2.io"
+custom_domain = true
 
 [site]
 bucket = "./public"

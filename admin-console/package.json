@@ -6,7 +6,8 @@
   "scripts": {
     "build": "remix build",
     "dev": "remix dev --manual -c \"pnpm dev:wrangler\"",
-    "dev:wrangler": "wrangler dev --live-reload --persist-to=../.wrangler/state"
+    "dev:wrangler": "wrangler dev --live-reload --persist-to=../.wrangler/state",
+    "deploy": "pnpm build && wrangler deploy"
   },
   "dependencies": {
     "@cloudflare/kv-asset-handler": "^0.3.0",

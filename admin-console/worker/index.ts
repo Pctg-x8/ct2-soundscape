@@ -12,6 +12,7 @@ import {
 import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
 // @ts-ignore
 import { AwsClient } from "aws4fetch";
+import { parseHexStringBytes } from "soundscape-shared/src/utils/hexstring";
 
 const MANIFEST = JSON.parse(__STATIC_CONTENT_MANIFEST);
 const handleRemixRequest = createRequestHandler(build, process.env.NODE_ENV);
@@ -61,9 +62,7 @@ export default {
         }
 
         try {
-            const idObfuscator = new Skip32ContentIdObfuscator(
-                new Uint8Array(JSON.parse(env.CONTENT_ID_OBFUSCATOR_KEY))
-            );
+            const idObfuscator = new Skip32ContentIdObfuscator(parseHexStringBytes(env.CONTENT_ID_OBFUSCATOR_KEY));
 
             let contentRepository: ContentRepository;
             if (process.env.NODE_ENV === "development") {
