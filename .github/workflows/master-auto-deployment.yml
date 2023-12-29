@@ -1,0 +1,54 @@
+jobs:
+  admin-console:
+    environment: prod:admin-console
+    name: Deployment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checking out
+        uses: "actions/checkout@v3"
+      - name: Setup PNPM
+        uses: "pnpm/action-setup@v2"
+        with:
+          run_install: |
+            
+            - args:
+                - "--frozen-lockfile"
+                - "-F"
+                - shared
+                - "-F"
+                - admin-console
+      - env:
+          CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+          CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+        name: deploy
+        run: pnpm run deploy
+        working-directory: admin-console
+  app:
+    environment: prod:app
+    name: Deployment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checking out
+        uses: "actions/checkout@v3"
+      - name: Setup PNPM
+        uses: "pnpm/action-setup@v2"
+        with:
+          run_install: |
+            
+            - args:
+                - "--frozen-lockfile"
+                - "-F"
+                - shared
+                - "-F"
+                - app
+      - env:
+          CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+          CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+        name: deploy
+        run: pnpm run deploy
+        working-directory: app
+name: Master Deployment
+on:
+  push:
+    branches:
+      - master
