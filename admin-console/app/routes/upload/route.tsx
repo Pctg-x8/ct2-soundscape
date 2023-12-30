@@ -25,11 +25,11 @@ export async function action({ request, context }: ActionFunctionArgs) {
     switch (licenseType) {
         case License.PublicDomain:
         case License.CreativeCommons4.BY:
-            case License.CreativeCommons4.BY_SA:
-                case License.CreativeCommons4.BY_NC:
-                    case License.CreativeCommons4.BY_ND:
-                        case License.CreativeCommons4.BY_NC_SA:
-                            case License.CreativeCommons4.BY_NC_ND:
+        case License.CreativeCommons4.BY_SA:
+        case License.CreativeCommons4.BY_NC:
+        case License.CreativeCommons4.BY_ND:
+        case License.CreativeCommons4.BY_NC_SA:
+        case License.CreativeCommons4.BY_NC_ND:
             license = licenseType;
             break;
         case 999:
@@ -165,7 +165,11 @@ export default function Page() {
                     <section>
                         <label htmlFor="licenseType">ライセンス形態</label>
                         <div className="licenseInputs">
-                            <select id="licenseType" name="licenseType" onChange={e => setCurrentLicenseSelection(Number(e.currentTarget.value))}>
+                            <select
+                                id="licenseType"
+                                name="licenseType"
+                                onChange={(e) => setCurrentLicenseSelection(Number(e.currentTarget.value))}
+                            >
                                 <option value={License.PublicDomain}>CC0</option>
                                 <option value={License.CreativeCommons4.BY}>CC-BY</option>
                                 <option value={License.CreativeCommons4.BY_SA}>CC-BY-SA</option>
