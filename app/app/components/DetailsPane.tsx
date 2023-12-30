@@ -2,6 +2,8 @@ import { Await, useSearchParams } from "@remix-run/react";
 import { Suspense } from "react";
 import type { NumRange } from "soundscape-shared/src/content";
 import type { License } from "soundscape-shared/src/valueObjects/license";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export type Details = {
     readonly title: string;
@@ -50,7 +52,15 @@ function Content({ data }: { readonly data: Details }) {
                     ? data.bpmRange.min
                     : `${data.bpmRange.min}～${data.bpmRange.max}`}
             </p>
-            <p id="DetailsComment">{data.comment || "（コメントなし）"}</p>
+            <section id="DetailsComment">
+                <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    // eslint-disable-next-line jsx-a11y/anchor-has-content
+                    components={{ a: (props) => <a {...props} target="_blank" /> }}
+                >
+                    {data.comment || "（コメントなし）"}
+                </ReactMarkdown>
+            </section>
             <button type="button" id="DetailsCloseButton" onClick={onClickClose}>
                 <span className="material-symbols-outlined">close</span>
             </button>
