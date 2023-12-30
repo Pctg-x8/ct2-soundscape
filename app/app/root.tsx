@@ -51,7 +51,7 @@ export function loader({ context, request }: LoaderFunctionArgs) {
 
     return defer(
         { items, details },
-        { headers: new Headers({ "Cache-Control": "maxage=3600, s-maxage=3600, must-revalidate" }) }
+        { headers: new Headers({ "Cache-Control": "max-age=3600, s-maxage=3600, must-revalidate" }) }
     );
 }
 
