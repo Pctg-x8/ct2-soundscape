@@ -23,11 +23,6 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
     return [{ title: pageTitle }];
 };
 
-export function shouldRevalidate() {
-    // 毎回署名付きURLを作ってもらう
-    return true;
-}
-
 export default function Page() {
     const { audioSource, title, artist } = useLoaderData<typeof loader>();
 
