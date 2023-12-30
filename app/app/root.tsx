@@ -49,10 +49,7 @@ export function loader({ context, request }: LoaderFunctionArgs) {
                         } satisfies Details)
               );
 
-    return defer(
-        { items, details },
-        { headers: new Headers({ "Cache-Control": "max-age=3600, s-maxage=3600, must-revalidate" }) }
-    );
+    return defer({ items, details }, { headers: new Headers({ "Cache-Control": "max-age=3600, must-revalidate" }) });
 }
 
 export function headers({ loaderHeaders }: HeadersArgs) {

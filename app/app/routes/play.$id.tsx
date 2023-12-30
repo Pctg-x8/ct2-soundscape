@@ -16,7 +16,7 @@ export async function loader({ params, context: { contentRepository } }: LoaderF
 
     return json(
         { audioSource, title: contentDetails.title, artist: contentDetails.artist },
-        { headers: new Headers({ "Cache-Control": "max-age=3540, s-maxage=3540, must-revalidate" }) }
+        { headers: new Headers({ "Cache-Control": "max-age=3540, must-revalidate" }) }
     );
 }
 
