@@ -70,7 +70,9 @@ export default function Player({ source, title }: { readonly source?: string; re
 
     useEffect(() => {
         if (state.state === "loading") {
-            setPlayQueued(state.location?.state["autoplay"] === true);
+            setPlayQueued(
+                state.location?.state && "autoplay" in state.location.state && state.location.state["autoplay"] === true
+            );
         }
     }, [state.location, state.state]);
 

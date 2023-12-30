@@ -3,6 +3,8 @@ import { defer, type LinksFunction, type LoaderFunctionArgs } from "@remix-run/c
 import { Await, Link, Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from "@remix-run/react";
 import { Suspense } from "react";
 import "./root.css";
+import DetailsPane, { type Details } from "./components/DetailsPane";
+import { ContentId } from "soundscape-shared/src/content";
 
 export const links: LinksFunction = () => [
     {
@@ -19,7 +21,7 @@ export type Content = {
     readonly genre: string;
 };
 
-export function loader({ context }: LoaderFunctionArgs) {
+export function loader({ context, request }: LoaderFunctionArgs) {
     const items: Promise<Content[]> = context.contentRepository.allDetails.then((xs) =>
         xs.map((x) => ({
             id: x.id.value,
@@ -29,11 +31,29 @@ export function loader({ context }: LoaderFunctionArgs) {
         }))
     );
 
-    return defer({ items });
+    const detailsTargetID = new URL(request.url).searchParams.get("details");
+    const details =
+        detailsTargetID === null
+            ? undefined
+            : context.contentRepository.get(new ContentId.External(Number(detailsTargetID))).then((r) =>
+                  r === undefined
+                      ? undefined
+                      : ({
+                            title: r.title,
+                            artist: r.artist,
+                            genre: r.genre,
+                            bpmRange: r.bpmRange,
+                            comment: r.comment,
+                            license: r.license,
+                            // TODO: Download Link URL
+                        } satisfies Details)
+              );
+
+    return defer({ items, details });
 }
 
 export default function App() {
-    const { items } = useLoaderData<typeof loader>();
+    const { items, details } = useLoaderData<typeof loader>();
 
     return (
         <html lang="en">
@@ -44,10 +64,15 @@ export default function App() {
                 <Links />
             </head>
             <body>
-                <Suspense fallback={<p>Loading...</p>}>
-                    <Await resolve={items}>{(items) => <ItemList items={items} />}</Await>
-                </Suspense>
-                <Outlet />
+                <section id="MainLayout">
+                    <section id="Top">
+                        <Suspense fallback={<p>Loading...</p>}>
+                            <Await resolve={items}>{(items) => <ItemList items={items} />}</Await>
+                        </Suspense>
+                        <DetailsPane data={details} />
+                    </section>
+                    <Outlet />
+                </section>
                 <ScrollRestoration />
                 <Scripts />
             </body>
@@ -60,7 +85,7 @@ function ItemList({ items }: { readonly items: Content[] }) {
         <ul>
             {items.map((x) => (
                 <li key={x.id}>
-                    <Link to={`/play/${x.id}`} state={{ autoplay: true }}>
+                    <Link to={`/play/${x.id}?details=${x.id}`} state={{ autoplay: true }}>
                         [{x.genre}] {x.artist} - {x.title}
                     </Link>
                 </li>

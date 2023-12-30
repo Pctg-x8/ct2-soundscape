@@ -1,6 +1,9 @@
 @import-normalize;
 
-p {
+p,
+h1,
+h2,
+small {
     margin: 0;
     padding: 0;
 }
@@ -9,6 +12,11 @@ html,
 body {
     font-family: system-ui, sans-serif;
     font-size: 16pt;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
 }
 
 .material-symbols-outlined {
@@ -19,11 +27,23 @@ body {
         "opsz" 24;
 }
 
+#MainLayout {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    grid-template-areas: "list" "player";
+}
+
+#Top {
+    position: relative;
+    grid-area: list;
+}
+
 #Player {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    z-index: 1;
+    background: white;
+    grid-area: player;
     padding: 1rem;
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -110,4 +130,54 @@ body {
     flex-direction: row;
     align-items: center;
     justify-content: start;
+}
+
+#DetailsPane {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 40%;
+    background: rgba(255 255 255 / 50%);
+    backdrop-filter: blur(16px);
+    box-shadow: 0 0 16px 0 #ccc;
+    transform: translateX(100%);
+    transition: transform 0.2s ease;
+    font-size: 12pt;
+    padding: 0.8rem;
+
+    &.show {
+        transform: translateX(0%);
+    }
+
+    & h2 {
+        font-size: 80%;
+        color: #999;
+        font-style: italic;
+        font-weight: normal;
+    }
+
+    & h1 {
+        font-size: 150%;
+        font-weight: normal;
+        margin-bottom: 0.4rem;
+
+        & small {
+            font-size: 80%;
+            color: #999;
+        }
+    }
+
+    #DetailsComment {
+        margin-top: 0.4rem;
+    }
+
+    #DetailsCloseButton {
+        position: absolute;
+        right: 8px;
+        top: 8px;
+        cursor: pointer;
+        border: 0;
+        background: transparent;
+    }
 }
