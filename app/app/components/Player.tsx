@@ -108,13 +108,13 @@ export default function Player({ source, title }: { readonly source?: string; re
         const p = nativePlayerRef.current;
         if (!p) return;
 
-        p.currentTime += 10;
+        p.currentTime -= 10;
     };
     const onFastForward = () => {
         const p = nativePlayerRef.current;
         if (!p) return;
 
-        p.currentTime -= 10;
+        p.currentTime += 10;
     };
     const onVolumeChanged = (e: ChangeEvent<HTMLInputElement>) => {
         const p = nativePlayerRef.current;
