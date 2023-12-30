@@ -1,6 +1,6 @@
-import type { MetaFunction } from "@remix-run/cloudflare";
+import type { HeadersArgs, MetaFunction } from "@remix-run/cloudflare";
 import { useLoaderData } from "@remix-run/react";
-import type { LoaderFunctionArgs } from "@remix-run/server-runtime";
+import { json, type LoaderFunctionArgs } from "@remix-run/server-runtime";
 import { ContentId } from "soundscape-shared/src/content";
 import Player from "~/components/Player";
 
@@ -14,7 +14,14 @@ export async function loader({ params, context: { contentRepository } }: LoaderF
         throw new Response("", { status: 404 });
     }
 
-    return { audioSource, title: contentDetails.title, artist: contentDetails.artist };
+    return json(
+        { audioSource, title: contentDetails.title, artist: contentDetails.artist },
+        { headers: new Headers({ "Cache-Control": "maxage=3540, s-maxage=3540, must-revalidate" }) }
+    );
+}
+
+export function headers({ loaderHeaders }: HeadersArgs) {
+    return { "Cache-Control": loaderHeaders.get("Cache-Control") };
 }
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {

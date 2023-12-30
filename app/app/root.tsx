@@ -1,5 +1,5 @@
 import { cssBundleHref } from "@remix-run/css-bundle";
-import { defer, type LinksFunction, type LoaderFunctionArgs } from "@remix-run/cloudflare";
+import { defer, type HeadersArgs, type LinksFunction, type LoaderFunctionArgs } from "@remix-run/cloudflare";
 import { Await, Link, Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from "@remix-run/react";
 import { Suspense } from "react";
 import "./root.css";
@@ -49,7 +49,14 @@ export function loader({ context, request }: LoaderFunctionArgs) {
                         } satisfies Details)
               );
 
-    return defer({ items, details });
+    return defer(
+        { items, details },
+        { headers: new Headers({ "Cache-Control": "maxage=3600, s-maxage=3600, must-revalidate" }) }
+    );
+}
+
+export function headers({ loaderHeaders }: HeadersArgs) {
+    return { "Cache-Control": loaderHeaders.get("Cache-Control") };
 }
 
 export default function App() {
