@@ -4,5 +4,5 @@ import Player from "~/components/Player";
 export const meta: MetaDescriptor[] = [{ title: "Soundscape" }];
 
 export default function Page() {
-    return <Player title="" />;
+    return <Player title="-" />;
 }

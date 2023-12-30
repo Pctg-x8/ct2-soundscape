@@ -75,7 +75,7 @@ export default function Player({ source, title }: { readonly source?: string; re
     }, [state.location, state.state]);
 
     useEffect(() => {
-        if (nativePlayerRef.current && playQueued) {
+        if (nativePlayerRef.current && playQueued && state.state === "idle") {
             nativePlayerRef.current.play();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
