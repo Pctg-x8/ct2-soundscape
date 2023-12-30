@@ -259,7 +259,8 @@ export class CloudflareContentReadonlyRepository implements ContentReadonlyRepos
         protected readonly infoStore: D1Database,
         protected readonly objectStore: R2Bucket,
         protected readonly objectStoreS3Client: AwsClient,
-        protected readonly objectStoreS3Endpoint: URL
+        protected readonly objectStoreS3Endpoint: URL,
+        protected readonly eventContext: ExecutionContext
     ) {}
 
     protected connectInfoStore() {
@@ -301,9 +302,22 @@ export class CloudflareContentReadonlyRepository implements ContentReadonlyRepos
         // available for 1 hour
         url.searchParams.set("X-Amz-Expires", "3600");
 
-        return await this.objectStoreS3Client
+        const cached = await caches.default.match(new Request(url));
+        if (cached !== undefined) {
+            return await cached.text();
+        }
+
+        const signed = await this.objectStoreS3Client
             .sign(new Request(url, { method: "GET" }), { aws: { signQuery: true } })
             .then((x: Request) => x.url);
+        this.eventContext.waitUntil(
+            caches.default.put(
+                new Request(url),
+                new Response(signed, { headers: new Headers({ "Cache-Control": "max-age=3540, must-revalidate" }) })
+            )
+        );
+
+        return signed;
     }
 }
 

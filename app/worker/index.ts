@@ -83,7 +83,8 @@ export default {
                     env.INFO_STORE,
                     env.OBJECT_STORE,
                     objectStoreS3Client,
-                    new URL(env.OBJECT_STORE_S3_ENDPOINT)
+                    new URL(env.OBJECT_STORE_S3_ENDPOINT),
+                    ctx
                 );
             }
 
