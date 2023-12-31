@@ -41,6 +41,7 @@ export default function App() {
     const { items } = useLoaderData<typeof loader>();
 
     const [details, setDetails] = useState<Promise<Details> | undefined>(undefined);
+    const [showPane, setShowPane] = useState(false);
 
     return (
         <html lang="en">
@@ -55,13 +56,24 @@ export default function App() {
                     <section id="Top">
                         <Suspense fallback={<p>Loading...</p>}>
                             <Await resolve={items}>
-                                {(items) => <ItemList items={items} setDetails={setDetails} />}
+                                {(items) => (
+                                    <ItemList
+                                        items={items}
+                                        setDetails={(d) => {
+                                            setDetails(d);
+                                            setShowPane(true);
+                                        }}
+                                    />
+                                )}
                             </Await>
                         </Suspense>
-                        <DetailsPane data={details} onClose={() => setDetails(undefined)} />
+                        <DetailsPane show={showPane} data={details} onClose={() => setShowPane(false)} />
                     </section>
                     <Outlet />
                 </section>
+                <button type="button" id="ShowSidePaneButton" onClick={() => setShowPane(true)}>
+                    <span className="material-symbols-outlined">menu</span>
+                </button>
                 <ScrollRestoration />
                 <Scripts />
             </body>

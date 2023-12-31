@@ -1,5 +1,11 @@
 @import-normalize;
 
+:root {
+    --layoutOrder-Base: 0;
+    --layoutOrder-SidePane: 1;
+    --layoutOrder-Player: 2;
+}
+
 p,
 h1,
 h2,
@@ -27,6 +33,19 @@ body {
         "opsz" 24;
 }
 
+#ShowSidePaneButton {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: var(--layoutOrder-Base);
+
+    width: 2rem;
+    height: 2rem;
+    border: 0;
+    background: rgb(255 255 255 / 20%);
+    cursor: pointer;
+}
+
 #MainLayout {
     width: 100%;
     height: 100%;
@@ -41,7 +60,7 @@ body {
 }
 
 #Player {
-    z-index: 1;
+    z-index: var(--layoutOrder-Player);
     background: white;
     grid-area: player;
     padding: 1rem;
@@ -133,6 +152,7 @@ body {
 }
 
 #DetailsPane {
+    z-index: var(--layoutOrder-SidePane);
     position: absolute;
     right: 0;
     top: 0;

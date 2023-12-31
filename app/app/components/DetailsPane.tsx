@@ -16,21 +16,21 @@ export type Details = {
 };
 
 export default function DetailsPane({
+    show = false,
     data,
     onClose,
 }: {
+    readonly show?: boolean;
     readonly data: Promise<Details> | undefined;
     readonly onClose: () => void;
 }) {
-    if (data === undefined) {
-        return <article id="DetailsPane"></article>;
-    }
-
     return (
-        <article id="DetailsPane" className="show">
-            <Suspense fallback={<p>Loading...</p>}>
-                <Await resolve={data}>{(data) => <Content data={data} />}</Await>
-            </Suspense>
+        <article id="DetailsPane" className={show ? "show" : undefined}>
+            {data ? (
+                <Suspense fallback={<p>Loading...</p>}>
+                    <Await resolve={data}>{(data) => <Content data={data} />}</Await>
+                </Suspense>
+            ) : undefined}
             <button type="button" id="DetailsCloseButton" onClick={onClose}>
                 <span className="material-symbols-outlined">close</span>
             </button>
