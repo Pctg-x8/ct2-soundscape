@@ -4,6 +4,16 @@
     --layoutOrder-Base: 0;
     --layoutOrder-SidePane: 1;
     --layoutOrder-Player: 2;
+
+    --color-base: #000;
+    --color-normalText: #eee;
+    --color-playerShadow: #666;
+    --color-sidePaneBase: rgb(0 0 0 / 20%);
+    --color-sidePaneShadow: #666;
+    --color-showSidePaneBase: rgb(255 255 255 / 10%);
+    --color-detailsArtistName: #ccc;
+    --color-detailsGenreName: #999;
+    --color-link: #6af;
 }
 
 p,
@@ -12,6 +22,14 @@ h2,
 small {
     margin: 0;
     padding: 0;
+}
+
+button {
+    color: var(--color-normalText);
+}
+
+a {
+    color: var(--color-link);
 }
 
 html,
@@ -23,6 +41,9 @@ body {
     margin: 0;
     padding: 0;
     overflow-x: hidden;
+
+    background: var(--color-base);
+    color: var(--color-normalText);
 }
 
 .material-symbols-outlined {
@@ -42,7 +63,7 @@ body {
     width: 2rem;
     height: 2rem;
     border: 0;
-    background: rgb(255 255 255 / 20%);
+    background: var(--color-showSidePaneBase);
     cursor: pointer;
 }
 
@@ -61,14 +82,14 @@ body {
 
 #Player {
     z-index: var(--layoutOrder-Player);
-    background: white;
+    background: var(--color-base);
     grid-area: player;
     padding: 1rem;
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-areas: "playing playing" "seek seek" "controls volume";
     column-gap: 0.8rem;
-    box-shadow: 0 0 8px 0 #ccc;
+    box-shadow: 0 0 8px 0 var(--color-playerShadow);
 }
 
 #PlayerPlayingArea {
@@ -119,6 +140,7 @@ body {
     height: 6px;
     background: #39f;
     border-radius: 3px;
+    box-shadow: 0 0 4px 2px #39f;
 }
 
 #PlayerControls {
@@ -136,7 +158,8 @@ body {
     & button {
         display: block;
         background: transparent;
-        border: solid 2px #333;
+        border: solid 2px var(--color-normalText);
+        color: var(--color-normalText);
         border-radius: 50%;
         aspect-ratio: 1 / 1;
         cursor: pointer;
@@ -158,21 +181,25 @@ body {
     top: 0;
     bottom: 0;
     width: 40%;
-    background: rgba(255 255 255 / 50%);
+    background: var(--color-sidePaneBase);
     backdrop-filter: blur(16px);
-    box-shadow: 0 0 16px 0 #ccc;
+    box-shadow: 0 0 16px 0 var(--color-sidePaneShadow);
     transform: translateX(100%);
-    transition: transform 0.2s ease;
+    opacity: 0;
+    transition:
+        transform 0.2s ease,
+        opacity 0.2s linear;
     font-size: 12pt;
     padding: 0.8rem;
 
     &.show {
         transform: translateX(0%);
+        opacity: 1;
     }
 
     & h2 {
         font-size: 80%;
-        color: #999;
+        color: var(--color-detailsGenreName);
         font-style: italic;
         font-weight: normal;
     }
@@ -184,7 +211,7 @@ body {
 
         & small {
             font-size: 80%;
-            color: #999;
+            color: var(--color-detailsArtistName);
         }
     }
 
@@ -196,6 +223,8 @@ body {
         position: absolute;
         right: 8px;
         top: 8px;
+        width: 2rem;
+        height: 2rem;
         cursor: pointer;
         border: 0;
         background: transparent;
