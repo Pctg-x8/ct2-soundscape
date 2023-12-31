@@ -16,6 +16,7 @@
     --color-showSidePaneBase: rgb(255 255 255 / 10%);
     --color-detailsArtistName: #ccc;
     --color-detailsGenreName: #999;
+    --color-detailsDownloadLink: #8bf;
     --color-link: #6af;
 }
 
@@ -200,6 +201,23 @@ body {
         opacity: 1;
     }
 
+    #DetailsCloseButton {
+        position: absolute;
+        right: 8px;
+        top: 8px;
+        width: 2rem;
+        height: 2rem;
+        cursor: pointer;
+        border: 0;
+        background: transparent;
+    }
+}
+
+#DetailsContentContainer {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+
     & h2 {
         font-size: 80%;
         color: var(--color-detailsGenreName);
@@ -228,14 +246,37 @@ body {
         line-height: 1rem;
     }
 
-    #DetailsCloseButton {
-        position: absolute;
-        right: 8px;
-        top: 8px;
-        width: 2rem;
-        height: 2rem;
-        cursor: pointer;
-        border: 0;
-        background: transparent;
+    #DetailsComment {
+        flex: 1;
+        overflow: auto;
+    }
+
+    #DetailsDownloadSection {
+        display: flex;
+        flex-direction: row;
+        align-items: baseline;
+
+        & p {
+            flex: 1;
+        }
+
+        & a {
+            display: block;
+            padding: 0.6rem 0.8rem;
+            text-decoration: none;
+            color: var(--color-detailsDownloadLink);
+            border: solid 1px var(--color-detailsDownloadLink);
+            border-radius: 8px;
+            background: rgb(var(--color-detailsDownloadLink) / 0%);
+            transition: background 0.2s ease;
+
+            &:hover {
+                background: rgb(var(--color-detailsDownloadLink) / 20%);
+            }
+
+            & > span {
+                vertical-align: middle;
+            }
+        }
     }
 }

@@ -1,11 +1,12 @@
 import { Await } from "@remix-run/react";
 import { Suspense } from "react";
 import type { NumRange } from "soundscape-shared/src/content";
-import type { License } from "soundscape-shared/src/valueObjects/license";
+import { License } from "soundscape-shared/src/valueObjects/license";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 export type Details = {
+    readonly id: number;
     readonly title: string;
     readonly artist: string;
     readonly genre: string;
@@ -15,7 +16,6 @@ export type Details = {
     readonly bpmRange: NumRange;
     readonly comment: string;
     readonly license: License.Type;
-    readonly downloadUrl?: string;
 };
 
 export default function DetailsPane({
@@ -44,7 +44,7 @@ export default function DetailsPane({
 function Content({ data }: { readonly data: Details }) {
     console.log(data);
     return (
-        <>
+        <section id="DetailsContentContainer">
             <h2>{data.genre}</h2>
             <h1>
                 <small>{data.artist} - </small>
@@ -71,6 +71,33 @@ function Content({ data }: { readonly data: Details }) {
                     {data.comment || "（コメントなし）"}
                 </ReactMarkdown>
             </section>
-        </>
+            <section id="DetailsDownloadSection">
+                <p>ライセンス形態: {formatLicense(data.license)}</p>
+                <a href={`/content/${data.id}/download`} download>
+                    <span className="material-symbols-outlined">download</span>ダウンロード
+                </a>
+            </section>
+        </section>
     );
+}
+
+function formatLicense(license: License.Type): string {
+    switch (license) {
+        case License.PublicDomain:
+            return "CC0 (Public Domain)";
+        case License.CreativeCommons4.BY:
+            return "CC-BY";
+        case License.CreativeCommons4.BY_SA:
+            return "CC-BY-SA";
+        case License.CreativeCommons4.BY_ND:
+            return "CC-BY-ND";
+        case License.CreativeCommons4.BY_NC:
+            return "CC-BY-NC";
+        case License.CreativeCommons4.BY_NC_ND:
+            return "CC-BY-NC-ND";
+        case License.CreativeCommons4.BY_NC_SA:
+            return "CC-BY-NC-SA";
+        default:
+            return license;
+    }
 }

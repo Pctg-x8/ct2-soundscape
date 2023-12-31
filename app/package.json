@@ -21,6 +21,7 @@
     "@remix-run/server-runtime": "^2.3.1",
     "autoprefixer": "^10.4.16",
     "isbot": "^3.6.8",
+    "mime": "^4.0.1",
     "postcss-normalize": "^10.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

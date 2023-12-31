@@ -1,6 +1,6 @@
 // content model
 
-import { D1Database, R2Bucket } from "@cloudflare/workers-types";
+import { D1Database, R2Bucket, ReadableStream, fetch } from "@cloudflare/workers-types";
 import { License } from "./valueObjects/license";
 import * as schema from "./schema";
 import { drizzle } from "drizzle-orm/d1";
@@ -71,10 +71,18 @@ export type ContentDetails = {
 };
 export type IdentifiedContentDetails = ContentDetails & { readonly id: ContentId.External };
 
+export type ContentDownloadInfo = {
+    readonly title: string;
+    readonly artist: string;
+    readonly contentType: string;
+    readonly stream: ReadableStream;
+};
+
 export interface ContentReadonlyRepository {
     get allDetails(): Promise<IdentifiedContentDetails[]>;
     get(id: ContentId.Untyped): Promise<ContentDetails | undefined>;
     getContentUrl(id: ContentId.Untyped): Promise<string | undefined>;
+    download(id: ContentId.Untyped): Promise<ContentDownloadInfo | undefined>;
 }
 
 export interface ContentRepository extends ContentReadonlyRepository {
@@ -150,6 +158,28 @@ export class CloudflareLocalContentReadonlyRepository implements ContentReadonly
         url.pathname = `${this.objectStoreMountPath}/${id.toInternal(this.idObfuscator).value}`;
 
         return Promise.resolve(url.toString());
+    }
+
+    async download(id: ContentId.Untyped): Promise<ContentDownloadInfo | undefined> {
+        const internalId = id.toInternal(this.idObfuscator);
+
+        const [infoRow, obj] = await Promise.all([
+            this.connectInfoStore()
+                .update(schema.details)
+                .set({ downloadCount: sql`${schema.details.downloadCount} + 1` })
+                .where(eq(schema.details.id, internalId.value))
+                .returning({ title: schema.details.title, artist: schema.details.artist })
+                .then((xs) => xs[0]),
+            this.objectStore.get(internalId.value.toString()),
+        ]);
+        if (!infoRow || !obj) return undefined;
+
+        return {
+            title: infoRow.title,
+            artist: infoRow.artist,
+            contentType: obj.httpMetadata?.contentType ?? "application/octet-stream",
+            stream: obj.body,
+        };
     }
 }
 
@@ -306,6 +336,28 @@ export class CloudflareContentReadonlyRepository implements ContentReadonlyRepos
         );
 
         return signed;
+    }
+
+    async download(id: ContentId.Untyped): Promise<ContentDownloadInfo | undefined> {
+        const internalId = id.toInternal(this.idObfuscator);
+
+        const [infoRow, obj] = await Promise.all([
+            this.connectInfoStore()
+                .update(schema.details)
+                .set({ downloadCount: sql`${schema.details.downloadCount} + 1` })
+                .where(eq(schema.details.id, internalId.value))
+                .returning({ title: schema.details.title, artist: schema.details.artist })
+                .then((xs) => xs[0]),
+            this.objectStore.get(internalId.value.toString()),
+        ]);
+        if (!infoRow || !obj) return undefined;
+
+        return {
+            title: infoRow.title,
+            artist: infoRow.artist,
+            contentType: obj.httpMetadata?.contentType ?? "application/octet-stream",
+            stream: obj.body,
+        };
     }
 }
 
