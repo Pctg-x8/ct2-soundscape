@@ -10,6 +10,7 @@ import { skip32 } from "./skip32";
 import { AwsClient } from "aws4fetch";
 import { unwrapNullishOr } from "./utils/nullish";
 import { _let } from "./utils";
+import { pick } from "./utils/typeImpl";
 
 export interface ContentIdObfuscator {
     obfuscate(internalId: number): number;
@@ -117,7 +118,7 @@ export class CloudflareLocalContentReadonlyRepository implements ContentReadonly
 
     private detailsFromDBRow(row: schema.Details): ContentDetails {
         return {
-            ...row,
+            ...pick(row, "title", "artist", "genre", "comment", "downloadCount", "dateJst"),
             bpmRange: { min: row.minBPM, max: row.maxBPM },
             license: unwrapNullishOr(License.fromDBValues(row.licenseType, row.licenseText), () => {
                 throw new Error("invalid license type");
@@ -168,13 +169,9 @@ export class CloudflareLocalContentRepository
             .insert(schema.details)
             .values([
                 {
-                    title: details.title,
-                    artist: details.artist,
-                    genre: details.genre,
+                    ...pick(details, "title", "artist", "genre", "comment", "dateJst"),
                     minBPM: details.bpmRange.min,
                     maxBPM: details.bpmRange.max,
-                    comment: details.comment,
-                    dateJst: details.dateJst,
                     licenseType,
                     licenseText,
                 },
@@ -205,14 +202,9 @@ export class CloudflareLocalContentRepository
         const [oldContent] = await db
             .update(schema.details)
             .set({
-                title: details.title,
-                artist: details.artist,
-                genre: details.genre,
+                ...pick(details, "title", "artist", "genre", "comment", "dateJst", "downloadCount"),
                 minBPM: details.bpmRange?.min,
                 maxBPM: details.bpmRange?.max,
-                comment: details.comment,
-                dateJst: details.dateJst,
-                downloadCount: details.downloadCount,
                 ...(details.license === undefined
                     ? {}
                     : _let(License.toDBValues(details.license), ([ty, tx]) => ({ licenseType: ty, licenseText: tx }))),
@@ -265,7 +257,7 @@ export class CloudflareContentReadonlyRepository implements ContentReadonlyRepos
 
     private detailsFromDBRow(row: schema.Details): ContentDetails {
         return {
-            ...row,
+            ...pick(row, "title", "artist", "genre", "comment", "downloadCount", "dateJst"),
             bpmRange: { min: row.minBPM, max: row.maxBPM },
             license: unwrapNullishOr(License.fromDBValues(row.licenseType, row.licenseText), () => {
                 throw new Error("invalid license type");
@@ -330,13 +322,9 @@ export class CloudflareContentRepository extends CloudflareContentReadonlyReposi
             .insert(schema.details)
             .values([
                 {
-                    title: details.title,
-                    artist: details.artist,
-                    genre: details.genre,
+                    ...pick(details, "title", "artist", "genre", "comment", "dateJst"),
                     minBPM: details.bpmRange.min,
                     maxBPM: details.bpmRange.max,
-                    comment: details.comment,
-                    dateJst: details.dateJst,
                     licenseType,
                     licenseText,
                 },
@@ -367,14 +355,9 @@ export class CloudflareContentRepository extends CloudflareContentReadonlyReposi
         const [oldContent] = await db
             .update(schema.details)
             .set({
-                title: details.title,
-                artist: details.artist,
-                genre: details.genre,
+                ...pick(details, "title", "artist", "genre", "comment", "dateJst", "downloadCount"),
                 minBPM: details.bpmRange?.min,
                 maxBPM: details.bpmRange?.max,
-                comment: details.comment,
-                dateJst: details.dateJst,
-                downloadCount: details.downloadCount,
                 ...(details.license === undefined
                     ? {}
                     : _let(License.toDBValues(details.license), ([ty, tx]) => ({ licenseType: ty, licenseText: tx }))),
