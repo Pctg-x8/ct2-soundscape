@@ -86,17 +86,17 @@ function formatLicense(license: License.Type): string {
         case License.PublicDomain:
             return "CC0 (Public Domain)";
         case License.CreativeCommons4.BY:
-            return "CC-BY";
+            return "Creative Commons BY";
         case License.CreativeCommons4.BY_SA:
-            return "CC-BY-SA";
+            return "Creative Commons BY-SA";
         case License.CreativeCommons4.BY_ND:
-            return "CC-BY-ND";
+            return "Creative Commons BY-ND";
         case License.CreativeCommons4.BY_NC:
-            return "CC-BY-NC";
+            return "Creative Commons BY-NC";
         case License.CreativeCommons4.BY_NC_ND:
-            return "CC-BY-NC-ND";
+            return "Creative Commons BY-NC-ND";
         case License.CreativeCommons4.BY_NC_SA:
-            return "CC-BY-NC-SA";
+            return "Creative Commons BY-NC-SA";
         default:
             return license;
     }
