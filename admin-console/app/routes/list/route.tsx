@@ -4,6 +4,8 @@ import {
     type LoaderFunctionArgs,
     type MetaDescriptor,
     json,
+    unstable_parseMultipartFormData,
+    unstable_createMemoryUploadHandler,
 } from "@remix-run/cloudflare";
 import {
     Await,
@@ -19,6 +21,10 @@ import EntryTable, { type EntryTableRow } from "./EntryTable";
 import type { ContentDetails } from "soundscape-shared/src/content";
 import { ContentId } from "soundscape-shared/src/content";
 import { License } from "soundscape-shared/src/valueObjects/license";
+import * as z from "zod";
+
+import * as zfd from "zod-form-data";
+import { pick } from "soundscape-shared/src/utils/typeImpl";
 
 export const meta: MetaDescriptor[] = [{ title: "Content List - Soundscape (Admin Console)" }];
 
@@ -44,31 +50,54 @@ export async function loader({ context }: LoaderFunctionArgs) {
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
-    // TODO: 本当はupdateのときのファイル差し替えはストリーミングアップロードしたい
-    const values = await request.formData();
+    const nonMultipart =
+        request.headers.get("Content-Type") === "application/x-www-form-urlencoded" ||
+        (request.headers.get("Content-Type")?.startsWith("application/x-www-form-urlencoded;") ?? false);
 
-    const deleteAction = values.get("deleteAction");
-    if (deleteAction) {
-        await context.contentRepository.delete(new ContentId.External(Number(deleteAction)));
+    // TODO: 本当はupdateのときのファイル差し替えはストリーミングアップロードしたい
+    const values = nonMultipart
+        ? await request.formData()
+        : await unstable_parseMultipartFormData(
+              request,
+              unstable_createMemoryUploadHandler({ maxPartSize: 100 * 1024 * 1024 })
+          );
+
+    const inputSchema = zfd.formData({ deleteAction: zfd.numeric().transform((x) => new ContentId.External(x)) }).or(
+        zfd.formData({
+            fromEditDialog: zfd
+                .text()
+                .transform((x) => (x === "false" ? false : new ContentId.External(Number.parseInt(x)))),
+            title: zfd.text(),
+            artist: zfd.text(),
+            genre: zfd.text(),
+            minBPM: zfd.numeric(),
+            maxBPM: zfd.numeric(),
+            comment: zfd.text(z.string().optional()).transform((x) => x ?? ""),
+            time: zfd.text().transform((x) => new Date(x)),
+            file: zfd.file(z.instanceof(File).optional()),
+        })
+    );
+    const input = inputSchema.parse(values);
+
+    if ("deleteAction" in input) {
+        await context.contentRepository.delete(input.deleteAction);
         return json({ action: "delete" });
     }
 
-    const fromEditDialog = values.get("fromEditDialog");
-    if (fromEditDialog) {
-        const saveRequired = fromEditDialog !== "false";
-        if (saveRequired) {
-            console.log("save required", values);
-            const file = values.get("file");
-            const id = new ContentId.External(Number(fromEditDialog));
+    if ("fromEditDialog" in input) {
+        if (input.fromEditDialog !== false) {
+            // save required
+
+            const id = input.fromEditDialog;
             const newDetails: Partial<ContentDetails> = {
-                title: String(values.get("title")),
-                comment: String(values.get("comment")),
-                dateJst: new Date(String(values.get("time"))),
+                ...pick(input, "title", "artist", "genre", "comment"),
+                bpmRange: { min: input.minBPM, max: input.maxBPM },
+                dateJst: input.time,
             };
 
-            if (file instanceof File) {
+            if (input.file instanceof File) {
                 // with content replacement
-                await context.contentRepository.update(id, newDetails, file.type, file);
+                await context.contentRepository.update(id, newDetails, input.file.type, input.file);
             } else {
                 // preserve content
                 await context.contentRepository.update(id, newDetails);

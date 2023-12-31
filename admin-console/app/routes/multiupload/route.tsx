@@ -8,6 +8,9 @@ import {
 import { type DragEvent, useEffect, useRef, useState, useCallback } from "react";
 import { readFileMetadata } from "src/contentReader";
 import { License } from "soundscape-shared/src/valueObjects/license";
+import * as zfd from "zod-form-data";
+import * as z from "zod";
+import { pick } from "soundscape-shared/src/utils/typeImpl";
 
 export const meta: MetaDescriptor[] = [{ title: "Multiple Uploader - Soundscape (Admin Console)" }];
 
@@ -17,21 +20,29 @@ export async function action({ request, context }: ActionFunctionArgs) {
         request,
         unstable_createMemoryUploadHandler({ maxPartSize: 100 * 1024 * 1024 })
     );
-    const file = body.get("file")! as File;
+
+    const inputSchema = zfd.formData({
+        title: zfd.text(),
+        artist: zfd.text(),
+        genre: zfd.text(),
+        minBPM: zfd.numeric(),
+        maxBPM: zfd.numeric(),
+        comment: zfd.text(z.string().optional()).transform((x) => x ?? ""),
+        time: zfd.text().transform((x) => new Date(x)),
+        file: zfd.file(),
+    });
+    const input = inputSchema.parse(body);
 
     const id = await context.contentRepository.add(
         {
-            title: String(body.get("title")),
-            artist: String(body.get("artist")),
-            genre: String(body.get("genre")),
-            bpmRange: { min: Number(body.get("minBPM")), max: Number(body.get("maxBPM")) },
-            comment: String(body.get("comment")),
-            dateJst: new Date(String(body.get("time"))),
+            ...pick(input, "title", "artist", "genre", "comment"),
+            bpmRange: { min: input.minBPM, max: input.maxBPM },
+            dateJst: input.time,
             // TODO: license input
             license: License.PublicDomain,
         },
-        file.type,
-        file
+        input.file.type,
+        input.file
     );
 
     return json({ success: id.value });
