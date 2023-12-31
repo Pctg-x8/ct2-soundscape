@@ -8,6 +8,9 @@
     --color-base: #000;
     --color-normalText: #eee;
     --color-playerShadow: #666;
+    --color-playerSeekbarBase: #333;
+    --color-playerSeekbarLoaded: #444;
+    --color-playerSeekbarPlayed: #39f;
     --color-sidePaneBase: rgb(0 0 0 / 20%);
     --color-sidePaneShadow: #666;
     --color-showSidePaneBase: rgb(255 255 255 / 10%);
@@ -120,7 +123,7 @@ body {
     left: 0;
     top: 0;
     height: 6px;
-    background: #eee;
+    background: var(--color-playerSeekbarBase);
     border-radius: 3px;
     width: 100%;
 }
@@ -129,7 +132,7 @@ body {
     position: absolute;
     top: 0;
     height: 6px;
-    background: #ccc;
+    background: var(--color-playerSeekbarLoaded);
     border-radius: 3px;
 }
 
@@ -138,9 +141,9 @@ body {
     left: 0;
     top: 0;
     height: 6px;
-    background: #39f;
+    background: var(--color-playerSeekbarPlayed);
     border-radius: 3px;
-    box-shadow: 0 0 4px 2px #39f;
+    box-shadow: 0 0 8px 0 var(--color-playerSeekbarPlayed);
 }
 
 #PlayerControls {
