@@ -13,7 +13,7 @@ export async function loader({ context, params }: LoaderFunctionArgs) {
     } satisfies Details);
 }
 
-export function header(): HeadersInit {
+export function headers(): HeadersInit {
     const cacheLength = 60 * 60 * 24 * 30;
 
     return { "Cache-Control": `max-age=${cacheLength}; s-maxage=${cacheLength}` };
