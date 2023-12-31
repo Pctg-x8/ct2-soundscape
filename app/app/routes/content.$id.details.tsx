@@ -14,6 +14,6 @@ export async function loader({ context, params }: LoaderFunctionArgs) {
             ...pick(result, "title", "artist", "genre", "bpmRange", "comment", "license"),
             // TODO: Download Link URL
         } satisfies Details,
-        { headers: { "Cache-Control": `max-age=${cacheLength}; s-maxage=${cacheLength}` } }
+        { headers: { "Cache-Control": `public, max-age=${cacheLength}, s-maxage=${cacheLength}` } }
     );
 }
