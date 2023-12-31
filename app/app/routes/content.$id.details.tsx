@@ -12,3 +12,9 @@ export async function loader({ context, params }: LoaderFunctionArgs) {
         // TODO: Download Link URL
     } satisfies Details);
 }
+
+export function header(): HeadersInit {
+    const cacheLength = 60 * 60 * 24 * 30;
+
+    return { "Cache-Control": `max-age=${cacheLength}; s-maxage=${cacheLength}` };
+}
