@@ -17,7 +17,6 @@ import type { ForwardedRef, MouseEvent } from "react";
 import "./style.css";
 import EntryTable, { type EntryTableRow } from "./EntryTable";
 import type { ContentDetails } from "soundscape-shared/src/content";
-import ContentFlags from "soundscape-shared/src/valueObjects/contentFlags";
 import { ContentId } from "soundscape-shared/src/content";
 import { License } from "soundscape-shared/src/valueObjects/license";
 
@@ -38,7 +37,6 @@ export async function loader({ context }: LoaderFunctionArgs) {
             comment: x.comment,
             dlCount: x.downloadCount,
             license: x.license,
-            downloadAllowed: x.flags.downloadAllowed,
         }))
     );
 
@@ -66,7 +64,6 @@ export async function action({ request, context }: ActionFunctionArgs) {
                 title: String(values.get("title")),
                 comment: String(values.get("comment")),
                 dateJst: new Date(String(values.get("time"))),
-                flags: ContentFlags.fromBooleans({ allowDownload: values.get("enableDownloads") === "on" }),
             };
 
             if (file instanceof File) {
@@ -104,7 +101,6 @@ export default function Page() {
         comment: "",
         dlCount: 0,
         license: License.PublicDomain,
-        downloadAllowed: false,
     });
     const editDialogRef = useRef<HTMLDialogElement>(null);
     const fs = useFetcher();
@@ -201,18 +197,6 @@ const EditDialog = forwardRef(function EditDialog(
                     <section>
                         <label htmlFor="file">ファイル（置き換える場合）</label>
                         <input id="file" name="file" type="file" accept="audio/*" />
-                    </section>
-                    <section>
-                        <p className="labelLike">オプション</p>
-                        <div>
-                            <input
-                                id="enableDownloads"
-                                name="enableDownloads"
-                                type="checkbox"
-                                defaultChecked={editing.downloadAllowed}
-                            />
-                            <label htmlFor="enableDownloads">ダウンロード許可</label>
-                        </div>
                     </section>
                     <section className="buttons">
                         <button type="submit" name="fromEditDialog" value={editing.id.toString()}>

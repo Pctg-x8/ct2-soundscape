@@ -5,7 +5,6 @@ import {
     unstable_parseMultipartFormData,
     json,
 } from "@remix-run/cloudflare";
-import ContentFlags from "soundscape-shared/src/valueObjects/contentFlags";
 import { type DragEvent, useEffect, useRef, useState, useCallback } from "react";
 import { readFileMetadata } from "src/contentReader";
 import { License } from "soundscape-shared/src/valueObjects/license";
@@ -28,9 +27,6 @@ export async function action({ request, context }: ActionFunctionArgs) {
             bpmRange: { min: Number(body.get("minBPM")), max: Number(body.get("maxBPM")) },
             comment: String(body.get("comment")),
             dateJst: new Date(String(body.get("time"))),
-            flags: ContentFlags.fromBooleans({
-                allowDownload: body.get("enableDownloads") === "on",
-            }),
             // TODO: license input
             license: License.PublicDomain,
         },
@@ -305,13 +301,6 @@ function Entry({
                         <button type="button" onClick={onAutoInputClicked}>
                             ファイルから自動入力
                         </button>
-                    </section>
-                    <section>
-                        <p className="labelLike">オプション</p>
-                        <div>
-                            <input id="enableDownloads" name="enableDownloads" type="checkbox" />
-                            <label htmlFor="enableDownloads">ダウンロード許可</label>
-                        </div>
                     </section>
                     <section className="buttons">
                         <button type="reset" className="negative">

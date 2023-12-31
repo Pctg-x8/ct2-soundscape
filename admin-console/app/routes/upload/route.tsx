@@ -5,7 +5,6 @@ import {
     unstable_parseMultipartFormData,
     json,
 } from "@remix-run/cloudflare";
-import ContentFlags from "soundscape-shared/src/valueObjects/contentFlags";
 import { useRef, useState } from "react";
 import { readFileMetadata } from "src/contentReader";
 import { License } from "soundscape-shared/src/valueObjects/license";
@@ -47,9 +46,6 @@ export async function action({ request, context }: ActionFunctionArgs) {
             bpmRange: { min: Number(body.get("minBPM")), max: Number(body.get("maxBPM")) },
             comment: String(body.get("comment")),
             dateJst: new Date(String(body.get("time"))),
-            flags: ContentFlags.fromBooleans({
-                allowDownload: body.get("enableDownloads") === "on",
-            }),
             license,
         },
         file.type,
@@ -180,13 +176,6 @@ export default function Page() {
                                 <option value={999}>その他</option>
                             </select>
                             <input name="licenseText" disabled={currentLicenseSelection !== 999} />
-                        </div>
-                    </section>
-                    <section>
-                        <p className="labelLike">オプション</p>
-                        <div>
-                            <input id="enableDownloads" name="enableDownloads" type="checkbox" />
-                            <label htmlFor="enableDownloads">ダウンロード許可</label>
                         </div>
                     </section>
                     <section className="buttons">

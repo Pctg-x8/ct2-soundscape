@@ -15,7 +15,6 @@ export type EntryTableRow = {
     readonly comment: string;
     readonly dlCount: number;
     readonly license: License.Type;
-    readonly downloadAllowed: boolean;
 };
 
 export default function EntryTable({
@@ -47,7 +46,6 @@ export default function EntryTable({
                     <th>制作日</th>
                     <th>ライセンス</th>
                     <th>DLCount</th>
-                    <th>Flags</th>
                     <th></th>
                 </tr>
             </thead>
@@ -64,7 +62,6 @@ export default function EntryTable({
                         </td>
                         <td>{licenseText(x.license)}</td>
                         <td className="num">{x.dlCount}</td>
-                        <td className="center">{x.downloadAllowed ? "DL可" : ""}</td>
                         <td className="actionButtons">
                             <f.Form method="post" onSubmit={onSubmit}>
                                 <button type="submit" name="deleteAction" value={x.id}>

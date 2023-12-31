@@ -1,0 +1,1 @@
+ALTER TABLE `details` DROP COLUMN `flags`;

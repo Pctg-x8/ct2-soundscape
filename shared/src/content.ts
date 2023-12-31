@@ -1,7 +1,6 @@
 // content model
 
 import { D1Database, R2Bucket } from "@cloudflare/workers-types";
-import ContentFlags from "./valueObjects/contentFlags";
 import { License } from "./valueObjects/license";
 import * as schema from "./schema";
 import { drizzle } from "drizzle-orm/d1";
@@ -66,7 +65,6 @@ export type ContentDetails = {
     readonly bpmRange: NumRange;
     readonly comment: string;
     readonly dateJst: Date;
-    readonly flags: ContentFlags;
     readonly downloadCount: number;
     readonly license: License.Type;
 };
@@ -177,7 +175,6 @@ export class CloudflareLocalContentRepository
                     maxBPM: details.bpmRange.max,
                     comment: details.comment,
                     dateJst: details.dateJst,
-                    flags: details.flags,
                     licenseType,
                     licenseText,
                 },
@@ -215,7 +212,6 @@ export class CloudflareLocalContentRepository
                 maxBPM: details.bpmRange?.max,
                 comment: details.comment,
                 dateJst: details.dateJst,
-                flags: details.flags,
                 downloadCount: details.downloadCount,
                 ...(details.license === undefined
                     ? {}
@@ -341,7 +337,6 @@ export class CloudflareContentRepository extends CloudflareContentReadonlyReposi
                     maxBPM: details.bpmRange.max,
                     comment: details.comment,
                     dateJst: details.dateJst,
-                    flags: details.flags,
                     licenseType,
                     licenseText,
                 },
@@ -379,7 +374,6 @@ export class CloudflareContentRepository extends CloudflareContentReadonlyReposi
                 maxBPM: details.bpmRange?.max,
                 comment: details.comment,
                 dateJst: details.dateJst,
-                flags: details.flags,
                 downloadCount: details.downloadCount,
                 ...(details.license === undefined
                     ? {}
