@@ -9,6 +9,9 @@ export type Details = {
     readonly title: string;
     readonly artist: string;
     readonly genre: string;
+    readonly year: number;
+    readonly month: number;
+    readonly day: number;
     readonly bpmRange: NumRange;
     readonly comment: string;
     readonly license: License.Type;
@@ -39,6 +42,7 @@ export default function DetailsPane({
 }
 
 function Content({ data }: { readonly data: Details }) {
+    console.log(data);
     return (
         <>
             <h2>{data.genre}</h2>
@@ -46,12 +50,18 @@ function Content({ data }: { readonly data: Details }) {
                 <small>{data.artist} - </small>
                 {data.title}
             </h1>
-            <p>
-                BPM:&nbsp;
-                {data.bpmRange.min === data.bpmRange.max
-                    ? data.bpmRange.min
-                    : `${data.bpmRange.min}～${data.bpmRange.max}`}
-            </p>
+            <ul>
+                <li>
+                    制作日:&nbsp;{data.year}/{data.month.toString().padStart(2, "0")}/
+                    {data.day.toString().padStart(2, "0")}
+                </li>
+                <li>
+                    BPM:&nbsp;
+                    {data.bpmRange.min === data.bpmRange.max
+                        ? data.bpmRange.min
+                        : `${data.bpmRange.min}～${data.bpmRange.max}`}
+                </li>
+            </ul>
             <section id="DetailsComment">
                 <ReactMarkdown
                     remarkPlugins={[remarkGfm]}

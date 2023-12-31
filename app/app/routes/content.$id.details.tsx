@@ -12,6 +12,9 @@ export async function loader({ context, params }: LoaderFunctionArgs) {
     return json(
         {
             ...pick(result, "title", "artist", "genre", "bpmRange", "comment", "license"),
+            year: result.dateJst.getFullYear(),
+            month: result.dateJst.getMonth() + 1,
+            day: result.dateJst.getDate(),
             // TODO: Download Link URL
         } satisfies Details,
         { headers: { "Cache-Control": `public, max-age=${cacheLength}, s-maxage=${cacheLength}` } }
