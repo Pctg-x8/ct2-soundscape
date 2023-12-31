@@ -1,4 +1,4 @@
-import { Await, useSearchParams } from "@remix-run/react";
+import { Await } from "@remix-run/react";
 import { Suspense } from "react";
 import type { NumRange } from "soundscape-shared/src/content";
 import type { License } from "soundscape-shared/src/valueObjects/license";
@@ -15,7 +15,13 @@ export type Details = {
     readonly downloadUrl?: string;
 };
 
-export default function DetailsPane({ data }: { readonly data: Promise<Details> | undefined }) {
+export default function DetailsPane({
+    data,
+    onClose,
+}: {
+    readonly data: Promise<Details> | undefined;
+    readonly onClose: () => void;
+}) {
     if (data === undefined) {
         return <article id="DetailsPane"></article>;
     }
@@ -25,20 +31,14 @@ export default function DetailsPane({ data }: { readonly data: Promise<Details> 
             <Suspense fallback={<p>Loading...</p>}>
                 <Await resolve={data}>{(data) => <Content data={data} />}</Await>
             </Suspense>
+            <button type="button" id="DetailsCloseButton" onClick={onClose}>
+                <span className="material-symbols-outlined">close</span>
+            </button>
         </article>
     );
 }
 
 function Content({ data }: { readonly data: Details }) {
-    const [, setSearchParams] = useSearchParams();
-
-    const onClickClose = () => {
-        setSearchParams((sp) => {
-            sp.delete("details");
-            return sp;
-        });
-    };
-
     return (
         <>
             <h2>{data.genre}</h2>
@@ -61,9 +61,6 @@ function Content({ data }: { readonly data: Details }) {
                     {data.comment || "（コメントなし）"}
                 </ReactMarkdown>
             </section>
-            <button type="button" id="DetailsCloseButton" onClick={onClickClose}>
-                <span className="material-symbols-outlined">close</span>
-            </button>
         </>
     );
 }
