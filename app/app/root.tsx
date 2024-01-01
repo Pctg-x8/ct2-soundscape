@@ -71,19 +71,21 @@ export default function App() {
             <body>
                 <section id="MainLayout">
                     <section id="Top">
-                        <Suspense fallback={<p>Loading...</p>}>
-                            <Await resolve={items}>
-                                {(items) => (
-                                    <ItemList
-                                        items={items}
-                                        setDetails={(d) => {
-                                            setDetails(d);
-                                            setShowPane(true);
-                                        }}
-                                    />
-                                )}
-                            </Await>
-                        </Suspense>
+                        <section id="TopScrollContainer">
+                            <Suspense fallback={<p>Loading...</p>}>
+                                <Await resolve={items}>
+                                    {(items) => (
+                                        <ItemList
+                                            items={items}
+                                            setDetails={(d) => {
+                                                setDetails(d);
+                                                setShowPane(true);
+                                            }}
+                                        />
+                                    )}
+                                </Await>
+                            </Suspense>
+                        </section>
                         <DetailsPane show={showPane} data={details} onClose={() => setShowPane(false)} />
                     </section>
                     <Outlet />

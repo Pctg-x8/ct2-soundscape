@@ -84,6 +84,15 @@ body {
 #Top {
     position: relative;
     grid-area: list;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#TopScrollContainer {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 @keyframes activeItemBackground {
