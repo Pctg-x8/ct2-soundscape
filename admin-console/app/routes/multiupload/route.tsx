@@ -29,17 +29,36 @@ export async function action({ request, context }: ActionFunctionArgs) {
         maxBPM: zfd.numeric(),
         comment: zfd.text(z.string().optional()).transform((x) => x ?? ""),
         time: zfd.text().transform((x) => new Date(x)),
+        licenseType: zfd.numeric(),
+        licenseText: zfd.text(z.string().optional()).transform((x) => x ?? ""),
         file: zfd.file(),
     });
     const input = inputSchema.parse(body);
+
+    let license: License.Type;
+    switch (input.licenseType) {
+        case License.PublicDomain:
+        case License.CreativeCommons4.BY:
+        case License.CreativeCommons4.BY_SA:
+        case License.CreativeCommons4.BY_NC:
+        case License.CreativeCommons4.BY_ND:
+        case License.CreativeCommons4.BY_NC_SA:
+        case License.CreativeCommons4.BY_NC_ND:
+            license = input.licenseType;
+            break;
+        case 999:
+            license = input.licenseText;
+            break;
+        default:
+            throw new Error("invalid license input");
+    }
 
     const id = await context.contentRepository.add(
         {
             ...pick(input, "title", "artist", "genre", "comment"),
             bpmRange: { min: input.minBPM, max: input.maxBPM },
             dateJst: input.time,
-            // TODO: license input
-            license: License.PublicDomain,
+            license,
         },
         input.file.type,
         input.file
@@ -169,6 +188,7 @@ function Entry({
 
     const formid = `uploadForm-${identifier}`;
 
+    const [currentLicenseSelection, setCurrentLicenseSelection] = useState<number>(0);
     const [title, setTitle] = useState("");
     const [artist, setArtist] = useState("");
 
@@ -312,6 +332,26 @@ function Entry({
                         <button type="button" onClick={onAutoInputClicked}>
                             ファイルから自動入力
                         </button>
+                    </section>
+                    <section>
+                        <label htmlFor="licenseType">ライセンス形態</label>
+                        <div className="licenseInputs">
+                            <select
+                                id="licenseType"
+                                name="licenseType"
+                                onChange={(e) => setCurrentLicenseSelection(Number(e.currentTarget.value))}
+                            >
+                                <option value={License.PublicDomain}>CC0</option>
+                                <option value={License.CreativeCommons4.BY}>CC-BY</option>
+                                <option value={License.CreativeCommons4.BY_SA}>CC-BY-SA</option>
+                                <option value={License.CreativeCommons4.BY_NC}>CC-BY-NC</option>
+                                <option value={License.CreativeCommons4.BY_NC_SA}>CC-BY-NC-SA</option>
+                                <option value={License.CreativeCommons4.BY_NC_ND}>CC-BY-NC-ND</option>
+                                <option value={License.CreativeCommons4.BY_ND}>CC-BY-ND</option>
+                                <option value={999}>その他</option>
+                            </select>
+                            <input name="licenseText" disabled={currentLicenseSelection !== 999} />
+                        </div>
                     </section>
                     <section className="buttons">
                         <button type="reset" className="negative">
