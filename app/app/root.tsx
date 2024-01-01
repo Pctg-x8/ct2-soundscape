@@ -11,7 +11,7 @@ import {
     useLoaderData,
     useMatches,
 } from "@remix-run/react";
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useReducer, useState } from "react";
 import "./root.css";
 import DetailsPane, { type Details } from "./components/DetailsPane";
 import { _let } from "soundscape-shared/src/utils";
@@ -34,31 +34,74 @@ export type Content = {
     readonly day: number;
 };
 
-export function loader({ context, request }: LoaderFunctionArgs) {
-    const items: Promise<Content[]> = context.contentRepository.allDetails.then((xs) =>
-        xs.map((x) => ({
-            id: x.id.value,
-            title: x.title,
-            artist: x.artist,
-            genre: x.genre,
-            year: x.dateJst.getFullYear(),
-            month: x.dateJst.getMonth() + 1,
-            day: x.dateJst.getDate(),
-        }))
+export async function loader({ context }: LoaderFunctionArgs) {
+    return defer(
+        { years: context.contentRepository.yearWithContentCount },
+        { headers: new Headers({ "Cache-Control": "max-age=3600, must-revalidate" }) }
     );
-
-    return defer({ items }, { headers: new Headers({ "Cache-Control": "max-age=3600, must-revalidate" }) });
 }
 
 export function headers({ loaderHeaders }: HeadersArgs) {
     return { "Cache-Control": loaderHeaders.get("Cache-Control") };
 }
 
+type ContentGroupState = { [year in number]?: { readonly opened: boolean; readonly contents?: Promise<Content[]> } };
+type ContentGroupAction =
+    | { readonly type: "toggle"; readonly groupKey: number }
+    | { readonly type: "openForContent"; readonly content: Content };
+
+function contentCreatedAtSortKey(c: Content): number {
+    return c.year * 10000 + c.month * 100 + c.day;
+}
+
 export default function App() {
-    const { items } = useLoaderData<typeof loader>();
+    const { years } = useLoaderData<typeof loader>();
 
     const [details, setDetails] = useState<Promise<Details> | undefined>(undefined);
     const [showPane, setShowPane] = useState(false);
+    const [contentGroups, dispatchContentGroupAction] = useReducer(
+        (current: ContentGroupState, action: ContentGroupAction) => {
+            async function loadGroupContent(groupKey: number): Promise<Content[]> {
+                const contents = await fetch(`/search/by-year/${groupKey}`).then((r) => r.json<Content[]>());
+                contents.sort((a, b) => contentCreatedAtSortKey(a) - contentCreatedAtSortKey(b));
+
+                // store stalling cache
+                cachedItems[groupKey] = contents;
+                return contents;
+            }
+
+            if (action.type === "toggle") {
+                const opened = current[action.groupKey]?.opened ?? false;
+                return opened
+                    ? { ...current, [action.groupKey]: { ...(current[action.groupKey] ?? {}), opened: false } }
+                    : {
+                          ...current,
+                          [action.groupKey]: {
+                              opened: true,
+                              contents: loadGroupContent(action.groupKey),
+                          },
+                      };
+            }
+
+            if (action.type === "openForContent") {
+                if (current[action.content.year]?.opened ?? false) {
+                    // すでに開いていたらなにもしない
+                    return current;
+                }
+
+                return {
+                    ...current,
+                    [action.content.year]: {
+                        opened: true,
+                        contents: loadGroupContent(action.content.year),
+                    },
+                };
+            }
+
+            throw new Error("unreachable");
+        },
+        {}
+    );
 
     return (
         <html lang="en">
@@ -73,10 +116,14 @@ export default function App() {
                     <section id="Top">
                         <section id="TopScrollContainer">
                             <Suspense fallback={<p>Loading...</p>}>
-                                <Await resolve={items}>
-                                    {(items) => (
+                                <Await resolve={years}>
+                                    {(years) => (
                                         <ItemList
-                                            items={items}
+                                            years={years}
+                                            contentGroups={contentGroups}
+                                            onClickGroup={(gk) =>
+                                                dispatchContentGroupAction({ type: "toggle", groupKey: gk })
+                                            }
                                             setDetails={(d) => {
                                                 setDetails(d);
                                                 setShowPane(true);
@@ -88,7 +135,12 @@ export default function App() {
                         </section>
                         <DetailsPane show={showPane} data={details} onClose={() => setShowPane(false)} />
                     </section>
-                    <Outlet />
+                    <Outlet
+                        context={{
+                            openGroupForContent: (c: Content) =>
+                                dispatchContentGroupAction({ type: "openForContent", content: c }),
+                        }}
+                    />
                 </section>
                 <button type="button" id="ShowSidePaneButton" onClick={() => setShowPane(true)}>
                     <span className="material-symbols-outlined">menu</span>
@@ -100,13 +152,43 @@ export default function App() {
     );
 }
 
+const cachedItems: { [year in number]?: Content[] } = {};
+
+function Item({
+    content,
+    active = false,
+    onClick,
+}: {
+    readonly content: Content;
+    readonly active?: boolean;
+    readonly onClick: (content: Content) => void;
+}) {
+    return (
+        <li className={active ? "active" : ""}>
+            <Link to={`/play/${content.id}`} state={{ autoplay: true }} onClick={() => onClick(content)}>
+                <span className="title">{content.title}</span>
+                <span className="genre">{content.genre}</span>
+                <span className="createdAt">
+                    {content.year}/{content.month.toString().padStart(2, "0")}/{content.day.toString().padStart(2, "0")}
+                </span>
+            </Link>
+        </li>
+    );
+}
+
 function ItemList({
-    items,
+    years,
+    contentGroups,
+    onClickGroup,
     setDetails,
 }: {
-    readonly items: Content[];
+    readonly years: [number, number][];
+    readonly contentGroups: ContentGroupState;
+    readonly onClickGroup: (groupKey: number) => void;
     readonly setDetails: (details: Promise<Details>) => void;
 }) {
+    const sortedYears = useMemo(() => years.sort(), [years]);
+
     const matches = useMatches();
     const currentPlayingID = _let(matches.find((m) => m.id === "routes/play.$id")?.params["id"], (id) =>
         id === undefined ? undefined : Number(id)
@@ -114,19 +196,49 @@ function ItemList({
 
     return (
         <ul id="ItemList">
-            {items.map((x) => (
-                <li key={x.id} className={currentPlayingID === x.id ? "active" : ""}>
-                    <Link
-                        to={`/play/${x.id}`}
-                        state={{ autoplay: true }}
-                        onClick={() => setDetails(fetch(`/content/${x.id}/details`).then((r) => r.json()))}
-                    >
-                        <span className="title">{x.title}</span>
-                        <span className="genre">{x.genre}</span>
-                        <span className="createdAt">
-                            {x.year}/{x.month.toString().padStart(2, "0")}/{x.day.toString().padStart(2, "0")}
-                        </span>
-                    </Link>
+            {sortedYears.map(([y, count]) => (
+                <li key={y}>
+                    <div className="labelContainer" onClick={() => onClickGroup(y)}>
+                        <span className="groupingValue">{y}</span>
+                        <span className="containedCount">{count} items</span>
+                    </div>
+                    {contentGroups[y]?.opened ?? false ? (
+                        <ul>
+                            <Suspense
+                                fallback={
+                                    y in cachedItems
+                                        ? cachedItems[y]!.map((x) => (
+                                              <Item
+                                                  key={x.id}
+                                                  content={x}
+                                                  active={currentPlayingID === x.id}
+                                                  onClick={(c) =>
+                                                      setDetails(
+                                                          fetch(`/content/${c.id}/details`).then((r) => r.json())
+                                                      )
+                                                  }
+                                              />
+                                          ))
+                                        : [<li key="Loading">Loading...</li>]
+                                }
+                            >
+                                <Await resolve={contentGroups[y]?.contents ?? Promise.resolve([])}>
+                                    {(content) =>
+                                        content.map((x) => (
+                                            <Item
+                                                key={x.id}
+                                                content={x}
+                                                active={currentPlayingID === x.id}
+                                                onClick={(c) =>
+                                                    setDetails(fetch(`/content/${c.id}/details`).then((r) => r.json()))
+                                                }
+                                            />
+                                        ))
+                                    }
+                                </Await>
+                            </Suspense>
+                        </ul>
+                    ) : undefined}
                 </li>
             ))}
         </ul>

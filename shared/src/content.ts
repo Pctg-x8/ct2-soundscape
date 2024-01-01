@@ -4,7 +4,7 @@ import { D1Database, R2Bucket, ReadableStream, fetch } from "@cloudflare/workers
 import { License } from "./valueObjects/license";
 import * as schema from "./schema";
 import { drizzle } from "drizzle-orm/d1";
-import { eq, sql } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 import { skip32 } from "./skip32";
 // @ts-ignore なぜか定義が見つけられないので一旦封じる
 import { AwsClient } from "aws4fetch";
@@ -80,6 +80,8 @@ export type ContentDownloadInfo = {
 
 export interface ContentRepository {
     get allDetails(): Promise<IdentifiedContentDetails[]>;
+    get yearWithContentCount(): Promise<[number, number][]>;
+    getDetailsByYear(year: number): Promise<IdentifiedContentDetails[]>;
     get(id: ContentId.Untyped): Promise<ContentDetails | undefined>;
     getContentUrl(id: ContentId.Untyped): Promise<string | undefined>;
     download(id: ContentId.Untyped): Promise<ContentDownloadInfo | undefined>;
@@ -123,7 +125,8 @@ export class CloudflareLocalContentRepository implements ContentRepository {
 
     private detailsFromDBRow(row: schema.Details): ContentDetails {
         return {
-            ...pick(row, "title", "artist", "genre", "comment", "downloadCount", "dateJst"),
+            ...pick(row, "title", "artist", "genre", "comment", "downloadCount"),
+            dateJst: new Date(row.year, row.month - 1, row.day),
             bpmRange: { min: row.minBPM, max: row.maxBPM },
             license: unwrapNullishOr(License.fromDBValues(row.licenseType, row.licenseText), () => {
                 throw new Error("invalid license type");
@@ -134,6 +137,27 @@ export class CloudflareLocalContentRepository implements ContentRepository {
     get allDetails(): Promise<IdentifiedContentDetails[]> {
         return this.connectInfoStore()
             .query.details.findMany()
+            .then((xs) =>
+                xs.map((r) => ({
+                    ...this.detailsFromDBRow(r),
+                    id: new ContentId.Internal(r.id).toExternal(this.idObfuscator),
+                }))
+            );
+    }
+
+    get yearWithContentCount(): Promise<[number, number][]> {
+        return this.connectInfoStore()
+            .select({ year: schema.details.year, count: count() })
+            .from(schema.details)
+            .groupBy(schema.details.year)
+            .then((xs) => xs.map((r) => [r.year, r.count]));
+    }
+
+    getDetailsByYear(year: number): Promise<IdentifiedContentDetails[]> {
+        return this.connectInfoStore()
+            .query.details.findMany({
+                where: eq(schema.details.year, year),
+            })
             .then((xs) =>
                 xs.map((r) => ({
                     ...this.detailsFromDBRow(r),
@@ -196,7 +220,10 @@ export class CloudflareLocalContentAdminRepository
             .insert(schema.details)
             .values([
                 {
-                    ...pick(details, "title", "artist", "genre", "comment", "dateJst"),
+                    ...pick(details, "title", "artist", "genre", "comment"),
+                    year: details.dateJst.getFullYear(),
+                    month: details.dateJst.getMonth() + 1,
+                    day: details.dateJst.getDate(),
                     minBPM: details.bpmRange.min,
                     maxBPM: details.bpmRange.max,
                     licenseType,
@@ -284,7 +311,8 @@ export class CloudflareContentRepository implements ContentRepository {
 
     private detailsFromDBRow(row: schema.Details): ContentDetails {
         return {
-            ...pick(row, "title", "artist", "genre", "comment", "downloadCount", "dateJst"),
+            ...pick(row, "title", "artist", "genre", "comment", "downloadCount"),
+            dateJst: new Date(row.year, row.month - 1, row.day),
             bpmRange: { min: row.minBPM, max: row.maxBPM },
             license: unwrapNullishOr(License.fromDBValues(row.licenseType, row.licenseText), () => {
                 throw new Error("invalid license type");
@@ -295,6 +323,27 @@ export class CloudflareContentRepository implements ContentRepository {
     get allDetails(): Promise<IdentifiedContentDetails[]> {
         return this.connectInfoStore()
             .query.details.findMany()
+            .then((xs) =>
+                xs.map((r) => ({
+                    ...this.detailsFromDBRow(r),
+                    id: new ContentId.Internal(r.id).toExternal(this.idObfuscator),
+                }))
+            );
+    }
+
+    get yearWithContentCount(): Promise<[number, number][]> {
+        return this.connectInfoStore()
+            .select({ year: schema.details.year, count: count() })
+            .from(schema.details)
+            .groupBy(schema.details.year)
+            .then((xs) => xs.map((r) => [r.year, r.count]));
+    }
+
+    getDetailsByYear(year: number): Promise<IdentifiedContentDetails[]> {
+        return this.connectInfoStore()
+            .query.details.findMany({
+                where: eq(schema.details.year, year),
+            })
             .then((xs) =>
                 xs.map((r) => ({
                     ...this.detailsFromDBRow(r),
@@ -371,7 +420,10 @@ export class CloudflareContentAdminRepository extends CloudflareContentRepositor
             .insert(schema.details)
             .values([
                 {
-                    ...pick(details, "title", "artist", "genre", "comment", "dateJst"),
+                    ...pick(details, "title", "artist", "genre", "comment"),
+                    year: details.dateJst.getFullYear(),
+                    month: details.dateJst.getMonth() + 1,
+                    day: details.dateJst.getDate(),
                     minBPM: details.bpmRange.min,
                     maxBPM: details.bpmRange.max,
                     licenseType,

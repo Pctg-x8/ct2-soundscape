@@ -111,44 +111,76 @@ body {
     margin: 0;
     font-size: 14pt;
 
-    li {
-        border-bottom: solid 1px var(--color-itemListSeparator);
-    }
+    & > li {
+        & .labelContainer {
+            padding: 0.4rem;
+            border-bottom: solid 1px var(--color-itemListSeparator);
+            cursor: pointer;
+            background: transparent;
+            transition: background 0.1s ease;
 
-    li.active {
-        animation: activeItemBackground 2s ease infinite alternate;
-    }
+            &:hover {
+                background: rgb(255 255 255 / 10%);
+            }
+        }
 
-    & a {
-        display: block;
-        padding: 0.4rem;
-        text-decoration: none;
-        background: transparent;
-        transition: background 0.1s ease;
+        & .groupingValue {
+            font-weight: bolder;
+        }
 
-        &:hover {
-            background: rgb(255 255 255 / 10%);
+        & .containedCount {
+            font-size: 70%;
+            color: var(--color-itemListSubText);
+            font-style: italic;
+            margin-left: 0.4rem;
         }
     }
 
-    & .title {
-        color: var(--color-normalText);
-    }
+    & > li > ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
 
-    & .genre {
-        margin-left: 0.4rem;
-        font-size: 80%;
-        color: var(--color-itemListSubText);
-        font-style: italic;
-        font-weight: lighter;
-    }
+        li {
+            border-bottom: solid 1px var(--color-itemListSeparator);
+        }
 
-    & .createdAt {
-        margin-left: 0.4rem;
-        font-size: 80%;
-        color: var(--color-itemListSubText);
-        font-style: italic;
-        font-weight: lighter;
+        li.active {
+            animation: activeItemBackground 2s ease infinite alternate;
+        }
+
+        & a {
+            display: block;
+            padding: 0.4rem;
+            padding-left: 1.4rem;
+            text-decoration: none;
+            background: transparent;
+            transition: background 0.1s ease;
+
+            &:hover {
+                background: rgb(255 255 255 / 10%);
+            }
+        }
+
+        & .title {
+            color: var(--color-normalText);
+        }
+
+        & .genre {
+            margin-left: 0.4rem;
+            font-size: 80%;
+            color: var(--color-itemListSubText);
+            font-style: italic;
+            font-weight: lighter;
+        }
+
+        & .createdAt {
+            margin-left: 0.4rem;
+            font-size: 80%;
+            color: var(--color-itemListSubText);
+            font-style: italic;
+            font-weight: lighter;
+        }
     }
 }
 
