@@ -1,13 +1,14 @@
 import { broadcastDevReady, createRequestHandler, logDevReady } from "@remix-run/cloudflare";
 import type { Fetcher } from "@remix-run/react";
 import * as build from "../build";
+// @ts-ignore
 import __STATIC_CONTENT_MANIFEST from "__STATIC_CONTENT_MANIFEST";
 import { getAssetFromKV } from "@cloudflare/kv-asset-handler";
 import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import {
-    CloudflareContentReadonlyRepository,
-    CloudflareLocalContentReadonlyRepository,
-    type ContentReadonlyRepository,
+    CloudflareContentRepository,
+    CloudflareLocalContentRepository,
+    type ContentRepository,
     Skip32ContentIdObfuscator,
 } from "soundscape-shared/src/content";
 // @ts-ignore
@@ -62,36 +63,32 @@ export default {
         }
 
         try {
-            const idObfuscator = new Skip32ContentIdObfuscator(parseHexStringBytes(env.CONTENT_ID_OBFUSCATOR_KEY));
-
-            let contentRepository: ContentReadonlyRepository;
-            if (process.env.NODE_ENV === "development") {
-                contentRepository = new CloudflareLocalContentReadonlyRepository(
-                    idObfuscator,
-                    env.INFO_STORE,
-                    env.OBJECT_STORE,
-                    "/r2-local"
-                );
-            } else {
-                const objectStoreS3Client = new AwsClient({
-                    accessKeyId: env.OBJECT_STORE_S3_ACCESS_KEY,
-                    secretAccessKey: env.OBJECT_STORE_S3_SECRET_ACCESS_KEY,
-                });
-
-                contentRepository = new CloudflareContentReadonlyRepository(
-                    idObfuscator,
-                    env.INFO_STORE,
-                    env.OBJECT_STORE,
-                    objectStoreS3Client,
-                    new URL(env.OBJECT_STORE_S3_ENDPOINT),
-                    ctx
-                );
-            }
-
-            return await handleRemixRequest(req, { contentRepository });
+            return await handleRemixRequest(req, { contentRepository: makeContentRepository(env, ctx) });
         } catch (e) {
             console.error(e);
             return new Response("An unexpected error occured", { status: 500 });
         }
     },
 };
+
+function makeContentRepository(env: FetchEnv, ctx: ExecutionContext): ContentRepository {
+    const idObfuscator = new Skip32ContentIdObfuscator(parseHexStringBytes(env.CONTENT_ID_OBFUSCATOR_KEY));
+
+    if (process.env.NODE_ENV === "development") {
+        return new CloudflareLocalContentRepository(idObfuscator, env.INFO_STORE, env.OBJECT_STORE, "/r2-local");
+    }
+
+    const objectStoreS3Client = new AwsClient({
+        accessKeyId: env.OBJECT_STORE_S3_ACCESS_KEY,
+        secretAccessKey: env.OBJECT_STORE_S3_SECRET_ACCESS_KEY,
+    });
+
+    return new CloudflareContentRepository(
+        idObfuscator,
+        env.INFO_STORE,
+        env.OBJECT_STORE,
+        objectStoreS3Client,
+        new URL(env.OBJECT_STORE_S3_ENDPOINT),
+        ctx
+    );
+}

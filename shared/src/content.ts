@@ -78,17 +78,14 @@ export type ContentDownloadInfo = {
     readonly stream: ReadableStream;
 };
 
-export interface ContentReadonlyRepository {
+export interface ContentRepository {
     get allDetails(): Promise<IdentifiedContentDetails[]>;
     get(id: ContentId.Untyped): Promise<ContentDetails | undefined>;
     getContentUrl(id: ContentId.Untyped): Promise<string | undefined>;
     download(id: ContentId.Untyped): Promise<ContentDownloadInfo | undefined>;
 }
 
-export interface ContentRepository extends ContentReadonlyRepository {
-    /**
-     * @returns id of the content
-     */
+export interface ContentAdminRepository extends ContentRepository {
     add(
         details: Omit<ContentDetails, "downloadCount">,
         contentType: string,
@@ -112,7 +109,7 @@ export interface ContentRepository extends ContentReadonlyRepository {
     delete(id: ContentId.Untyped): Promise<void>;
 }
 
-export class CloudflareLocalContentReadonlyRepository implements ContentReadonlyRepository {
+export class CloudflareLocalContentRepository implements ContentRepository {
     constructor(
         protected readonly idObfuscator: ContentIdObfuscator,
         protected readonly infoStore: D1Database,
@@ -183,9 +180,9 @@ export class CloudflareLocalContentReadonlyRepository implements ContentReadonly
     }
 }
 
-export class CloudflareLocalContentRepository
-    extends CloudflareLocalContentReadonlyRepository
-    implements ContentRepository
+export class CloudflareLocalContentAdminRepository
+    extends CloudflareLocalContentRepository
+    implements ContentAdminRepository
 {
     async add(
         details: Omit<ContentDetails, "downloadCount">,
@@ -271,7 +268,7 @@ export class CloudflareLocalContentRepository
     }
 }
 
-export class CloudflareContentReadonlyRepository implements ContentReadonlyRepository {
+export class CloudflareContentRepository implements ContentRepository {
     constructor(
         protected readonly idObfuscator: ContentIdObfuscator,
         protected readonly infoStore: D1Database,
@@ -361,7 +358,7 @@ export class CloudflareContentReadonlyRepository implements ContentReadonlyRepos
     }
 }
 
-export class CloudflareContentRepository extends CloudflareContentReadonlyRepository implements ContentRepository {
+export class CloudflareContentAdminRepository extends CloudflareContentRepository implements ContentAdminRepository {
     async add(
         details: Omit<ContentDetails, "downloadCount">,
         contentType: string,

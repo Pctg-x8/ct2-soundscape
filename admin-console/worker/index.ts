@@ -1,13 +1,14 @@
 import { broadcastDevReady, createRequestHandler, logDevReady } from "@remix-run/cloudflare";
 import type { Fetcher } from "@remix-run/react";
 import * as build from "../build";
+// @ts-ignore
 import __STATIC_CONTENT_MANIFEST from "__STATIC_CONTENT_MANIFEST";
 import { getAssetFromKV } from "@cloudflare/kv-asset-handler";
 import {
-    CloudflareContentRepository,
-    CloudflareLocalContentRepository,
-    type ContentRepository,
+    type ContentAdminRepository,
     Skip32ContentIdObfuscator,
+    CloudflareLocalContentAdminRepository,
+    CloudflareContentAdminRepository,
 } from "soundscape-shared/src/content";
 import { type D1Database, type R2Bucket } from "@cloudflare/workers-types";
 // @ts-ignore
@@ -96,9 +97,9 @@ export default {
         try {
             const idObfuscator = new Skip32ContentIdObfuscator(parseHexStringBytes(env.CONTENT_ID_OBFUSCATOR_KEY));
 
-            let contentRepository: ContentRepository;
+            let contentRepository: ContentAdminRepository;
             if (process.env.NODE_ENV === "development") {
-                contentRepository = new CloudflareLocalContentRepository(
+                contentRepository = new CloudflareLocalContentAdminRepository(
                     idObfuscator,
                     env.INFO_STORE,
                     env.OBJECT_STORE,
@@ -110,7 +111,7 @@ export default {
                     secretAccessKey: env.OBJECT_STORE_S3_SECRET_ACCESS_KEY,
                 });
 
-                contentRepository = new CloudflareContentRepository(
+                contentRepository = new CloudflareContentAdminRepository(
                     idObfuscator,
                     env.INFO_STORE,
                     env.OBJECT_STORE,
