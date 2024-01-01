@@ -17,6 +17,8 @@
     --color-detailsArtistName: #ccc;
     --color-detailsGenreName: #999;
     --color-detailsDownloadLink: #8bf;
+    --color-itemListSeparator: #333;
+    --color-itemListSubText: #999;
     --color-link: #6af;
 }
 
@@ -82,6 +84,63 @@ body {
 #Top {
     position: relative;
     grid-area: list;
+}
+
+@keyframes activeItemBackground {
+    from {
+        background: rgb(192 204 255 / 15%);
+    }
+
+    to {
+        background: rgb(192 204 255 / 20%);
+    }
+}
+
+#ItemList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 14pt;
+
+    li {
+        border-bottom: solid 1px var(--color-itemListSeparator);
+    }
+
+    li.active {
+        animation: activeItemBackground 2s ease infinite alternate;
+    }
+
+    & a {
+        display: block;
+        padding: 0.4rem;
+        text-decoration: none;
+        background: transparent;
+        transition: background 0.1s ease;
+
+        &:hover {
+            background: rgb(255 255 255 / 10%);
+        }
+    }
+
+    & .title {
+        color: var(--color-normalText);
+    }
+
+    & .genre {
+        margin-left: 0.4rem;
+        font-size: 80%;
+        color: var(--color-itemListSubText);
+        font-style: italic;
+        font-weight: lighter;
+    }
+
+    & .createdAt {
+        margin-left: 0.4rem;
+        font-size: 80%;
+        color: var(--color-itemListSubText);
+        font-style: italic;
+        font-weight: lighter;
+    }
 }
 
 #Player {

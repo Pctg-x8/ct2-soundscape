@@ -1,9 +1,20 @@
 import { cssBundleHref } from "@remix-run/css-bundle";
 import { defer, type HeadersArgs, type LinksFunction, type LoaderFunctionArgs } from "@remix-run/cloudflare";
-import { Await, Link, Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from "@remix-run/react";
+import {
+    Await,
+    Link,
+    Links,
+    Meta,
+    Outlet,
+    Scripts,
+    ScrollRestoration,
+    useLoaderData,
+    useMatches,
+} from "@remix-run/react";
 import { Suspense, useState } from "react";
 import "./root.css";
 import DetailsPane, { type Details } from "./components/DetailsPane";
+import { _let } from "soundscape-shared/src/utils";
 
 export const links: LinksFunction = () => [
     {
@@ -18,6 +29,9 @@ export type Content = {
     readonly title: string;
     readonly artist: string;
     readonly genre: string;
+    readonly year: number;
+    readonly month: number;
+    readonly day: number;
 };
 
 export function loader({ context, request }: LoaderFunctionArgs) {
@@ -27,6 +41,9 @@ export function loader({ context, request }: LoaderFunctionArgs) {
             title: x.title,
             artist: x.artist,
             genre: x.genre,
+            year: x.dateJst.getFullYear(),
+            month: x.dateJst.getMonth() + 1,
+            day: x.dateJst.getDate(),
         }))
     );
 
@@ -88,16 +105,25 @@ function ItemList({
     readonly items: Content[];
     readonly setDetails: (details: Promise<Details>) => void;
 }) {
+    const matches = useMatches();
+    const currentPlayingID = _let(matches.find((m) => m.id === "routes/play.$id")?.params["id"], (id) =>
+        id === undefined ? undefined : Number(id)
+    );
+
     return (
-        <ul>
+        <ul id="ItemList">
             {items.map((x) => (
-                <li key={x.id}>
+                <li key={x.id} className={currentPlayingID === x.id ? "active" : ""}>
                     <Link
                         to={`/play/${x.id}`}
                         state={{ autoplay: true }}
                         onClick={() => setDetails(fetch(`/content/${x.id}/details`).then((r) => r.json()))}
                     >
-                        [{x.genre}] {x.artist} - {x.title}
+                        <span className="title">{x.title}</span>
+                        <span className="genre">{x.genre}</span>
+                        <span className="createdAt">
+                            {x.year}/{x.month.toString().padStart(2, "0")}/{x.day.toString().padStart(2, "0")}
+                        </span>
                     </Link>
                 </li>
             ))}
