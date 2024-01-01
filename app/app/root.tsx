@@ -187,7 +187,7 @@ function ItemList({
     readonly onClickGroup: (groupKey: number) => void;
     readonly setDetails: (details: Promise<Details>) => void;
 }) {
-    const sortedYears = useMemo(() => years.sort(), [years]);
+    const sortedYears = useMemo(() => years.sort((a, b) => a[0] - b[0]), [years]);
 
     const matches = useMatches();
     const currentPlayingID = _let(matches.find((m) => m.id === "routes/play.$id")?.params["id"], (id) =>
