@@ -256,7 +256,10 @@ export class CloudflareLocalContentAdminRepository
         const [oldContent] = await db
             .update(schema.details)
             .set({
-                ...pick(details, "title", "artist", "genre", "comment", "dateJst", "downloadCount"),
+                ...pick(details, "title", "artist", "genre", "comment", "downloadCount"),
+                year: details.dateJst?.getFullYear(),
+                month: _let(details.dateJst?.getMonth(), (x) => (x === undefined ? undefined : x + 1)),
+                day: details.dateJst?.getDate(),
                 minBPM: details.bpmRange?.min,
                 maxBPM: details.bpmRange?.max,
                 ...(details.license === undefined
@@ -456,7 +459,10 @@ export class CloudflareContentAdminRepository extends CloudflareContentRepositor
         const [oldContent] = await db
             .update(schema.details)
             .set({
-                ...pick(details, "title", "artist", "genre", "comment", "dateJst", "downloadCount"),
+                ...pick(details, "title", "artist", "genre", "comment", "downloadCount"),
+                year: details.dateJst?.getFullYear(),
+                month: _let(details.dateJst?.getMonth(), (x) => (x === undefined ? undefined : x + 1)),
+                day: details.dateJst?.getDate(),
                 minBPM: details.bpmRange?.min,
                 maxBPM: details.bpmRange?.max,
                 ...(details.license === undefined
