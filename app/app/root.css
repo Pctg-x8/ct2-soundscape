@@ -19,6 +19,7 @@
     --color-detailsDownloadLink: #8bf;
     --color-itemListSeparator: #333;
     --color-itemListSubText: #999;
+    --color-detailsDefaultSectionHeaderBorder: #666;
     --color-link: #6af;
 }
 
@@ -378,5 +379,56 @@ body {
                 vertical-align: middle;
             }
         }
+    }
+}
+
+#DetailsPane:has(#DetailsDefaultContentContainer) {
+    overflow: auto;
+}
+
+#DetailsDefaultContentContainer {
+    line-height: 1.1rem;
+    font-size: 12pt;
+
+    & p,
+    & dd {
+        overflow-wrap: break-word;
+        word-break: keep-all;
+    }
+
+    & p {
+        margin: 0.8rem 0;
+    }
+
+    & details {
+        summary {
+            font-weight: bolder;
+            border-bottom: solid 1px var(--color-detailsDefaultSectionHeaderBorder);
+            padding: 0.4rem;
+            cursor: pointer;
+        }
+
+        & p:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    & dl {
+        dt {
+            font-weight: bolder;
+            font-style: italic;
+        }
+        dd {
+            margin-bottom: 0.4rem;
+
+            em {
+                font-style: normal;
+                font-weight: bolder;
+            }
+        }
+    }
+
+    & .relaxedDetailContent {
+        padding: 0.4rem;
     }
 }
