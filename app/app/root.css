@@ -428,6 +428,11 @@ body {
         }
     }
 
+    & pre {
+        font-size: 10pt;
+        margin: 1rem 0;
+    }
+
     & .relaxedDetailContent {
         padding: 0.4rem;
     }
