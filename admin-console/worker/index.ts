@@ -5,9 +5,10 @@ import * as build from "../build";
 import __STATIC_CONTENT_MANIFEST from "__STATIC_CONTENT_MANIFEST";
 import { getAssetFromKV } from "@cloudflare/kv-asset-handler";
 import {
-    type ContentAdminRepository,
     Skip32ContentIdObfuscator,
-    CloudflareLocalContentAdminRepository,
+    ContentStreamingUrlProvider,
+    LocalContentStreamingUrlProvider,
+    SignedContentStreamingUrlProvider,
     CloudflareContentAdminRepository,
 } from "soundscape-shared/src/content";
 import { type D1Database, type R2Bucket } from "@cloudflare/workers-types";
@@ -97,29 +98,12 @@ export default {
         try {
             const idObfuscator = new Skip32ContentIdObfuscator(parseHexStringBytes(env.CONTENT_ID_OBFUSCATOR_KEY));
 
-            let contentRepository: ContentAdminRepository;
-            if (process.env.NODE_ENV === "development") {
-                contentRepository = new CloudflareLocalContentAdminRepository(
-                    idObfuscator,
-                    env.INFO_STORE,
-                    env.OBJECT_STORE,
-                    "/r2-local"
-                );
-            } else {
-                const objectStoreS3Client = new AwsClient({
-                    accessKeyId: env.OBJECT_STORE_S3_ACCESS_KEY,
-                    secretAccessKey: env.OBJECT_STORE_S3_SECRET_ACCESS_KEY,
-                });
-
-                contentRepository = new CloudflareContentAdminRepository(
-                    idObfuscator,
-                    env.INFO_STORE,
-                    env.OBJECT_STORE,
-                    objectStoreS3Client,
-                    new URL(env.OBJECT_STORE_S3_ENDPOINT),
-                    ctx
-                );
-            }
+            const contentRepository = new CloudflareContentAdminRepository(
+                idObfuscator,
+                env.INFO_STORE,
+                env.OBJECT_STORE,
+                createContentStreamingUrlProvider(env, ctx)
+            );
 
             return await handleRemixRequest(req, { contentRepository });
         } catch (e) {
@@ -128,3 +112,15 @@ export default {
         }
     },
 };
+
+function createContentStreamingUrlProvider(env: FetchEnv, ctx: ExecutionContext): ContentStreamingUrlProvider {
+    if (process.env.NODE_ENV === "development") {
+        return new LocalContentStreamingUrlProvider("/r2-local");
+    }
+
+    const s3Client = new AwsClient({
+        accessKeyId: env.OBJECT_STORE_S3_ACCESS_KEY,
+        secretAccessKey: env.OBJECT_STORE_S3_SECRET_ACCESS_KEY,
+    });
+    return new SignedContentStreamingUrlProvider(s3Client, new URL(env.OBJECT_STORE_S3_ENDPOINT), ctx);
+}

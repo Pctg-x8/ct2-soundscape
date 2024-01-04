@@ -7,9 +7,10 @@ import { getAssetFromKV } from "@cloudflare/kv-asset-handler";
 import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import {
     CloudflareContentRepository,
-    CloudflareLocalContentRepository,
-    type ContentRepository,
     Skip32ContentIdObfuscator,
+    LocalContentStreamingUrlProvider,
+    SignedContentStreamingUrlProvider,
+    type ContentStreamingUrlProvider,
 } from "soundscape-shared/src/content";
 // @ts-ignore
 import { AwsClient } from "aws4fetch";
@@ -63,7 +64,16 @@ export default {
         }
 
         try {
-            return await handleRemixRequest(req, { contentRepository: makeContentRepository(env, ctx) });
+            const idObfuscator = new Skip32ContentIdObfuscator(parseHexStringBytes(env.CONTENT_ID_OBFUSCATOR_KEY));
+
+            const contentRepository = new CloudflareContentRepository(
+                idObfuscator,
+                env.INFO_STORE,
+                env.OBJECT_STORE,
+                createContentStreamingUrlProvider(env, ctx)
+            );
+
+            return await handleRemixRequest(req, { contentRepository });
         } catch (e) {
             console.error(e);
             return new Response("An unexpected error occured", { status: 500 });
@@ -71,24 +81,14 @@ export default {
     },
 };
 
-function makeContentRepository(env: FetchEnv, ctx: ExecutionContext): ContentRepository {
-    const idObfuscator = new Skip32ContentIdObfuscator(parseHexStringBytes(env.CONTENT_ID_OBFUSCATOR_KEY));
-
+function createContentStreamingUrlProvider(env: FetchEnv, ctx: ExecutionContext): ContentStreamingUrlProvider {
     if (process.env.NODE_ENV === "development") {
-        return new CloudflareLocalContentRepository(idObfuscator, env.INFO_STORE, env.OBJECT_STORE, "/r2-local");
+        return new LocalContentStreamingUrlProvider("/r2-local");
     }
 
-    const objectStoreS3Client = new AwsClient({
+    const s3Client = new AwsClient({
         accessKeyId: env.OBJECT_STORE_S3_ACCESS_KEY,
         secretAccessKey: env.OBJECT_STORE_S3_SECRET_ACCESS_KEY,
     });
-
-    return new CloudflareContentRepository(
-        idObfuscator,
-        env.INFO_STORE,
-        env.OBJECT_STORE,
-        objectStoreS3Client,
-        new URL(env.OBJECT_STORE_S3_ENDPOINT),
-        ctx
-    );
+    return new SignedContentStreamingUrlProvider(s3Client, new URL(env.OBJECT_STORE_S3_ENDPOINT), ctx);
 }
