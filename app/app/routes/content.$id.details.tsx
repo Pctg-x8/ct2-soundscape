@@ -1,5 +1,5 @@
 import { json, type LoaderFunctionArgs } from "@remix-run/server-runtime";
-import { ContentId } from "soundscape-shared/src/content";
+import { ContentId } from "soundscape-shared/src/content/id";
 import type { Details } from "~/components/DetailsPane";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
 

@@ -5,13 +5,13 @@ import * as build from "../build";
 import __STATIC_CONTENT_MANIFEST from "__STATIC_CONTENT_MANIFEST";
 import { getAssetFromKV } from "@cloudflare/kv-asset-handler";
 import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
+import { CloudflareContentRepository } from "soundscape-shared/src/content";
+import { Skip32ContentIdObfuscator } from "soundscape-shared/src/content/id";
 import {
-    CloudflareContentRepository,
-    Skip32ContentIdObfuscator,
     LocalContentStreamingUrlProvider,
     SignedContentStreamingUrlProvider,
     type ContentStreamingUrlProvider,
-} from "soundscape-shared/src/content";
+} from "soundscape-shared/src/content/streamUrlProvider";
 // @ts-ignore
 import { AwsClient } from "aws4fetch";
 import { parseHexStringBytes } from "soundscape-shared/src/utils/hexstring";

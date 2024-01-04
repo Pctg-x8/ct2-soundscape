@@ -4,13 +4,13 @@ import * as build from "../build";
 // @ts-ignore
 import __STATIC_CONTENT_MANIFEST from "__STATIC_CONTENT_MANIFEST";
 import { getAssetFromKV } from "@cloudflare/kv-asset-handler";
+import { CloudflareContentAdminRepository } from "soundscape-shared/src/content";
+import { Skip32ContentIdObfuscator } from "soundscape-shared/src/content/id";
 import {
-    Skip32ContentIdObfuscator,
-    ContentStreamingUrlProvider,
+    type ContentStreamingUrlProvider,
     LocalContentStreamingUrlProvider,
     SignedContentStreamingUrlProvider,
-    CloudflareContentAdminRepository,
-} from "soundscape-shared/src/content";
+} from "soundscape-shared/src/content/streamUrlProvider";
 import { type D1Database, type R2Bucket } from "@cloudflare/workers-types";
 // @ts-ignore
 import { AwsClient } from "aws4fetch";
