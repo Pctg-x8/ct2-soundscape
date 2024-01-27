@@ -71,9 +71,10 @@ export interface ContentAdminRepository extends ContentRepository {
 }
 
 export interface ContentAdminMultipartRepository extends ContentAdminRepository {
-    register(uploadId: string, uploadKey: string): Promise<ReversibleOperation<ContentId.External>>;
-    queryUploadMultipartInfo(contentId: ContentId.Untyped): Promise<ContentUploadMultipartInfo | undefined>;
-    unregister(contentId: ContentId.Untyped): Promise<ReversibleOperation>;
+    beginMultipartUploading(contentType: string): Promise<ReversibleOperation<ContentId.External>>;
+    uploadPart(contentId: ContentId.Untyped, partNumber: number, data: ArrayBuffer): Promise<R2UploadedPart>;
+    abortMultipartUploading(contentId: ContentId.Untyped): Promise<ReversibleOperation>;
+    completeMultipartUploading(contentId: ContentId.Untyped, parts: R2UploadedPart[]): Promise<ReversibleOperation>;
 }
 
 export class CloudflareContentRepository implements ContentRepository {
@@ -259,38 +260,101 @@ export class CloudflareContentAdminRepository
         }
     }
 
-    async register(uploadId: string, uploadKey: string): Promise<ReversibleOperation<ContentId.External>> {
-        const [{ id }] = await this.connectInfoStore()
-            .insert(schema.pendingUploads)
-            .values({ r2MultipartKey: uploadKey, r2MultipartUploadId: uploadId })
-            .returning({ id: schema.pendingUploads.contentId });
+    async beginMultipartUploading(contentType: string): Promise<ReversibleOperation<ContentId.External>> {
+        const db = this.connectInfoStore();
+        const issueContentId = async () => {
+            const [{ id }] = await db
+                .insert(schema.pendingUploads)
+                .values({ r2MultipartKey: "", r2MultipartUploadId: "" })
+                .returning({ id: schema.pendingUploads.contentId });
 
-        return new ReversibleOperation(new ContentId.Internal(id).toExternal(this.idObfuscator), async () => {
-            await this.connectInfoStore().delete(schema.pendingUploads).where(eq(schema.pendingUploads.contentId, id));
-        });
+            return new ReversibleOperation(id, async () => {
+                await this.connectInfoStore()
+                    .delete(schema.pendingUploads)
+                    .where(eq(schema.pendingUploads.contentId, id));
+            });
+        };
+
+        // TODO: ほんとうはawait usingを使いたい wranglerが対応してない
+        const id = await issueContentId();
+        try {
+            const upload = await this.objectStore.createMultipartUpload(id.value.toString(), {
+                httpMetadata: { contentType },
+            });
+            await db
+                .update(schema.pendingUploads)
+                .set({ r2MultipartUploadId: upload.uploadId, r2MultipartKey: upload.key })
+                .where(eq(schema.pendingUploads.contentId, id.value));
+
+            return id.moveoutWithValue(new ContentId.Internal(id.value).toExternal(this.idObfuscator));
+        } finally {
+            await id[Symbol.asyncDispose]();
+        }
     }
 
-    async queryUploadMultipartInfo(contentId: ContentId.Untyped): Promise<ContentUploadMultipartInfo | undefined> {
-        const internalId = contentId.toInternal(this.idObfuscator).value;
-
-        return await this.connectInfoStore().query.pendingUploads.findFirst({
-            where: eq(schema.pendingUploads.contentId, internalId),
-            extras: {
-                key: sql<string>`${schema.pendingUploads.r2MultipartKey}`.as("key"),
-                id: sql<string>`${schema.pendingUploads.r2MultipartUploadId}`.as("id"),
-            },
+    async uploadPart(contentId: ContentId.Untyped, partNumber: number, data: ArrayBuffer): Promise<R2UploadedPart> {
+        const r = await this.connectInfoStore().query.pendingUploads.findFirst({
+            where: eq(schema.pendingUploads.contentId, contentId.toInternal(this.idObfuscator).value),
         });
+        if (!r) {
+            throw new Error(`#${contentId.value} has no started multipart uploading`);
+        }
+
+        return await this.objectStore
+            .resumeMultipartUpload(r.r2MultipartKey, r.r2MultipartUploadId)
+            .uploadPart(partNumber, data);
     }
 
-    async unregister(contentId: ContentId.Untyped): Promise<ReversibleOperation> {
+    async abortMultipartUploading(contentId: ContentId.Untyped): Promise<ReversibleOperation> {
         const internalId = contentId.toInternal(this.idObfuscator).value;
-        const [r] = await this.connectInfoStore()
-            .delete(schema.pendingUploads)
-            .where(eq(schema.pendingUploads.contentId, internalId))
-            .returning();
+        const take = async () => {
+            const [r] = await this.connectInfoStore()
+                .delete(schema.pendingUploads)
+                .where(eq(schema.pendingUploads.contentId, internalId))
+                .returning();
 
-        return new ReversibleOperation(void 0, async () => {
-            await this.connectInfoStore().insert(schema.pendingUploads).values(r);
-        });
+            return new ReversibleOperation(r, async () => {
+                await this.connectInfoStore().insert(schema.pendingUploads).values(r);
+            });
+        };
+
+        // TODO: 本当はawait usingを使いたい wranglerが対応してない
+        const r = await take();
+        try {
+            await this.objectStore.resumeMultipartUpload(r.value.r2MultipartKey, r.value.r2MultipartUploadId).abort();
+
+            return r.moveoutWithValue(void 0);
+        } finally {
+            await r[Symbol.asyncDispose]();
+        }
+    }
+
+    async completeMultipartUploading(
+        contentId: ContentId.Untyped,
+        parts: R2UploadedPart[]
+    ): Promise<ReversibleOperation> {
+        const internalId = contentId.toInternal(this.idObfuscator).value;
+        const take = async () => {
+            const [r] = await this.connectInfoStore()
+                .delete(schema.pendingUploads)
+                .where(eq(schema.pendingUploads.contentId, internalId))
+                .returning();
+
+            return new ReversibleOperation(r, async () => {
+                await this.connectInfoStore().insert(schema.pendingUploads).values(r);
+            });
+        };
+
+        // TODO: ほんとうはawait usingを使いたい wranglerが対応してない
+        const r = await take();
+        try {
+            await this.objectStore
+                .resumeMultipartUpload(r.value.r2MultipartKey, r.value.r2MultipartUploadId)
+                .complete(parts);
+
+            return r.moveoutWithValue(void 0);
+        } finally {
+            await r[Symbol.asyncDispose]();
+        }
     }
 }
