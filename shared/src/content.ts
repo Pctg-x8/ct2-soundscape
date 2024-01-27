@@ -10,6 +10,7 @@ import { _let } from "./utils";
 import { pick } from "./utils/typeImpl";
 import { ContentId, ContentIdObfuscator } from "./content/id";
 import { ContentStreamingUrlProvider } from "./content/streamUrlProvider";
+import { ReversibleOperation } from "./utils/ReversibleOperation";
 
 export type NumRange = { readonly min: number; readonly max: number };
 
@@ -30,6 +31,10 @@ export type ContentDownloadInfo = {
     readonly artist: string;
     readonly contentType: string;
     readonly stream: ReadableStream;
+};
+export type ContentUploadMultipartInfo = {
+    readonly key: string;
+    readonly id: string;
 };
 
 export interface ContentRepository {
@@ -63,6 +68,12 @@ export interface ContentAdminRepository extends ContentRepository {
     ): Promise<void>;
 
     delete(id: ContentId.Untyped): Promise<void>;
+}
+
+export interface ContentAdminMultipartRepository extends ContentAdminRepository {
+    register(uploadId: string, uploadKey: string): Promise<ReversibleOperation<ContentId.External>>;
+    queryUploadMultipartInfo(contentId: ContentId.Untyped): Promise<ContentUploadMultipartInfo | undefined>;
+    unregister(contentId: ContentId.Untyped): Promise<ReversibleOperation>;
 }
 
 export class CloudflareContentRepository implements ContentRepository {
@@ -155,7 +166,10 @@ export class CloudflareContentRepository implements ContentRepository {
     }
 }
 
-export class CloudflareContentAdminRepository extends CloudflareContentRepository implements ContentAdminRepository {
+export class CloudflareContentAdminRepository
+    extends CloudflareContentRepository
+    implements ContentAdminMultipartRepository
+{
     async add(
         details: Omit<ContentDetails, "downloadCount">,
         contentType: string,
@@ -243,5 +257,40 @@ export class CloudflareContentAdminRepository extends CloudflareContentRepositor
             await db.insert(schema.details).values([recovered]);
             throw e;
         }
+    }
+
+    async register(uploadId: string, uploadKey: string): Promise<ReversibleOperation<ContentId.External>> {
+        const [{ id }] = await this.connectInfoStore()
+            .insert(schema.pendingUploads)
+            .values({ r2MultipartKey: uploadKey, r2MultipartUploadId: uploadId })
+            .returning({ id: schema.pendingUploads.contentId });
+
+        return new ReversibleOperation(new ContentId.Internal(id).toExternal(this.idObfuscator), async () => {
+            await this.connectInfoStore().delete(schema.pendingUploads).where(eq(schema.pendingUploads.contentId, id));
+        });
+    }
+
+    async queryUploadMultipartInfo(contentId: ContentId.Untyped): Promise<ContentUploadMultipartInfo | undefined> {
+        const internalId = contentId.toInternal(this.idObfuscator).value;
+
+        return await this.connectInfoStore().query.pendingUploads.findFirst({
+            where: eq(schema.pendingUploads.contentId, internalId),
+            extras: {
+                key: sql<string>`${schema.pendingUploads.r2MultipartKey}`.as("key"),
+                id: sql<string>`${schema.pendingUploads.r2MultipartUploadId}`.as("id"),
+            },
+        });
+    }
+
+    async unregister(contentId: ContentId.Untyped): Promise<ReversibleOperation> {
+        const internalId = contentId.toInternal(this.idObfuscator).value;
+        const [r] = await this.connectInfoStore()
+            .delete(schema.pendingUploads)
+            .where(eq(schema.pendingUploads.contentId, internalId))
+            .returning();
+
+        return new ReversibleOperation(void 0, async () => {
+            await this.connectInfoStore().insert(schema.pendingUploads).values(r);
+        });
     }
 }
