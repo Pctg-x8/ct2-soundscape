@@ -19,7 +19,7 @@ import type { ForwardedRef, MouseEvent } from "react";
 import "./style.css";
 import EntryTable, { type EntryTableRow } from "./EntryTable";
 import type { ContentDetails } from "soundscape-shared/src/content";
-import { ContentId } from "soundscape-shared/src/content";
+import { ContentId } from "soundscape-shared/src/content/id";
 import { License } from "soundscape-shared/src/valueObjects/license";
 import * as z from "zod";
 

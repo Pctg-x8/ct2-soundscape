@@ -23,3 +23,9 @@ export const details = sqliteTable(
 );
 export type Details = Readonly<typeof details.$inferSelect>;
 export type DetailsInsert = Readonly<typeof details.$inferInsert>;
+
+export const pendingUploads = sqliteTable("pendingUploads", {
+    contentId: integer("content_id").primaryKey(),
+    r2MultipartKey: text("r2_multipart_key").notNull(),
+    r2MultipartUploadId: text("r2_multipart_upload_id").notNull(),
+});

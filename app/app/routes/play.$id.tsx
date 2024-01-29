@@ -2,7 +2,7 @@ import type { HeadersArgs, MetaFunction } from "@remix-run/cloudflare";
 import { useLoaderData, useOutletContext } from "@remix-run/react";
 import { json, type LoaderFunctionArgs } from "@remix-run/server-runtime";
 import { useEffect } from "react";
-import { ContentId } from "soundscape-shared/src/content";
+import { ContentId } from "soundscape-shared/src/content/id";
 import Player from "~/components/Player";
 import type { Content } from "~/root";
 
