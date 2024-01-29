@@ -50,6 +50,35 @@ jobs:
         name: deploy
         run: pnpm run deploy
         working-directory: app
+  headless-admin-console:
+    environment: prod:headless-admin-console
+    name: "Deployment(Headless Admin Console)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checking out
+        uses: "actions/checkout@v3"
+      - name: Setup PNPM
+        uses: "pnpm/action-setup@v2"
+        with:
+          run_install: |
+            
+            - args:
+                - "--frozen-lockfile"
+                - "-F"
+                - shared
+                - "-F"
+                - headless-admin-console
+      - name: Setup Rust
+        uses: "actions-rs/toolchain@v1"
+        with:
+          target: wasm32-unknown-unknown
+          toolchain: stable
+      - env:
+          CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+          CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+        name: deploy
+        run: pnpm run deploy
+        working-directory: headless-admin-console
 name: Master Deployment
 on:
   push:
