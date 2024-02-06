@@ -30,8 +30,14 @@ export const pendingUploads = sqliteTable("pendingUploads", {
     r2MultipartUploadId: text("r2_multipart_upload_id").notNull(),
 });
 
-export const uploadedParts = sqliteTable("uploadedParts", {
-    contentId: integer("content_id").primaryKey(),
-    partNumber: integer("part_number").notNull(),
-    etag: text("etag").notNull(),
-});
+export const uploadedParts = sqliteTable(
+    "uploadedParts",
+    {
+        contentId: integer("content_id").notNull(),
+        partNumber: integer("part_number").notNull(),
+        etag: text("etag").notNull(),
+    },
+    (table) => ({
+        contentIdIndex: index("content_id_index").on(table.contentId),
+    })
+);

@@ -1,0 +1,1 @@
+CREATE INDEX `content_id_index` ON `uploadedParts` (`content_id`);
