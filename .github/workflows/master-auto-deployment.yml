@@ -15,11 +15,11 @@ jobs:
           run_install: |
             
             - args:
-                - "--frozen-lockfile"
                 - "-F"
                 - shared
                 - "-F"
                 - ct2-soundscape-admin-console
+                - "--frozen-lockfile"
       - env:
           CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
           CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}"
@@ -39,11 +39,11 @@ jobs:
           run_install: |
             
             - args:
-                - "--frozen-lockfile"
                 - "-F"
                 - shared
                 - "-F"
                 - app
+                - "--frozen-lockfile"
       - env:
           CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
           CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}"
@@ -63,11 +63,11 @@ jobs:
           run_install: |
             
             - args:
-                - "--frozen-lockfile"
                 - "-F"
                 - shared
                 - "-F"
                 - headless-admin-console
+                - "--frozen-lockfile"
       - name: Setup Rust
         uses: "actions-rs/toolchain@v1"
         with:

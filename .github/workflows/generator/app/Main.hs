@@ -8,7 +8,7 @@ import System.Environment (getArgs)
 import System.FilePath ((</>))
 import Workflow.GitHub.Actions qualified as GHA
 import Workflow.GitHub.Actions.Predefined.Checkout qualified as Checkout
-import Workflow.GitHub.Actions.Predefined.Rust.Toolchain qualified as RustToolchain
+import Workflow.GitHub.Actions.Predefined.Rust.Toolchain qualified as Rust
 import Workflow.GitHub.Actions.Predefined.SetupPNPM qualified as SetupPNPM
 
 secretCloudflareApiToken :: String
@@ -31,7 +31,10 @@ withDeploymentEnvironments =
   GHA.env "CLOUDFLARE_ACCOUNT_ID" secretCloudflareAccountID . GHA.env "CLOUDFLARE_API_TOKEN" secretCloudflareApiToken
 
 filterProject :: String -> SetupPNPM.RunInstallOption -> SetupPNPM.RunInstallOption
-filterProject name opt = opt {SetupPNPM.runInstallArgs = SetupPNPM.runInstallArgs opt <> ["-F", name]}
+filterProject name opt = opt {SetupPNPM.runInstallArgs = SetupPNPM.runInstallArgs opt ++ ["-F", name]}
+
+useFrozenLockfile :: SetupPNPM.RunInstallOption -> SetupPNPM.RunInstallOption
+useFrozenLockfile opt = opt {SetupPNPM.runInstallArgs = SetupPNPM.runInstallArgs opt ++ ["--frozen-lockfile"]}
 
 headlessAdminConsoleDeploymentJob :: GHA.Job
 headlessAdminConsoleDeploymentJob =
@@ -41,16 +44,10 @@ headlessAdminConsoleDeploymentJob =
         [ GHA.namedAs "Checking out" $ Checkout.step Nothing,
           GHA.namedAs "Setup PNPM" $
             SetupPNPM.step
-              [ SetupPNPM.runInstallOption {SetupPNPM.runInstallArgs = ["--frozen-lockfile"]}
-                  & filterProject "shared"
-                  & filterProject headlessAdminConsoleProjectName
+              [ SetupPNPM.runInstallOption & filterProject "shared" & filterProject headlessAdminConsoleProjectName & useFrozenLockfile
               ],
-          GHA.namedAs "Setup Rust" $
-            RustToolchain.step & RustToolchain.useStable & RustToolchain.forTarget "wasm32-unknown-unknown",
-          GHA.namedAs "deploy" $
-            GHA.workAt "headless-admin-console" $
-              withDeploymentEnvironments $
-                GHA.runStep "pnpm run deploy"
+          GHA.namedAs "Setup Rust" $ Rust.step & Rust.useStable & Rust.forTarget "wasm32-unknown-unknown",
+          GHA.namedAs "deploy" $ GHA.runStep "pnpm run deploy" & withDeploymentEnvironments & GHA.workAt "headless-admin-console"
         ]
 
 adminConsoleDeploymentJob :: GHA.Job
@@ -61,11 +58,9 @@ adminConsoleDeploymentJob =
         [ GHA.namedAs "Checking out" $ Checkout.step Nothing,
           GHA.namedAs "Setup PNPM" $
             SetupPNPM.step
-              [ SetupPNPM.runInstallOption {SetupPNPM.runInstallArgs = ["--frozen-lockfile"]}
-                  & filterProject "shared"
-                  & filterProject adminConsoleProjectName
+              [ SetupPNPM.runInstallOption & filterProject "shared" & filterProject adminConsoleProjectName & useFrozenLockfile
               ],
-          GHA.namedAs "deploy" $ GHA.workAt "admin-console" $ withDeploymentEnvironments $ GHA.runStep "pnpm run deploy"
+          GHA.namedAs "deploy" $ GHA.runStep "pnpm run deploy" & withDeploymentEnvironments & GHA.workAt "admin-console"
         ]
 
 appDeploymentJob :: GHA.Job
@@ -76,11 +71,9 @@ appDeploymentJob =
         [ GHA.namedAs "Checking out" $ Checkout.step Nothing,
           GHA.namedAs "Setup PNPM" $
             SetupPNPM.step
-              [ SetupPNPM.runInstallOption {SetupPNPM.runInstallArgs = ["--frozen-lockfile"]}
-                  & filterProject "shared"
-                  & filterProject appProjectName
+              [ SetupPNPM.runInstallOption & filterProject "shared" & filterProject appProjectName & useFrozenLockfile
               ],
-          GHA.namedAs "deploy" $ GHA.workAt "app" $ withDeploymentEnvironments $ GHA.runStep "pnpm run deploy"
+          GHA.namedAs "deploy" $ GHA.runStep "pnpm run deploy" & withDeploymentEnvironments & GHA.workAt "app"
         ]
 
 targets :: [(FilePath, GHA.Workflow)]
