@@ -4,10 +4,6 @@ import { convertLicenseInput } from "src/conversion";
 import * as z from "zod";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
 
-const UploadPartSchema = z.object({
-    part_number: z.number(),
-    etag: z.string(),
-});
 const AddedContentDetailsSchema = z.object({
     title: z.string(),
     artist: z.string(),
@@ -31,21 +27,15 @@ export async function loader({ params, context, request }: LoaderFunctionArgs) {
         throw new Response("invalid content id", { status: 400 });
     }
 
-    const { parts, details } = z
-        .object({ parts: z.array(UploadPartSchema), details: AddedContentDetailsSchema })
-        .parse(await request.json());
+    const details = AddedContentDetailsSchema.parse(await request.json());
     const license = convertLicenseInput(details);
 
     // TODO: 本来はawait usingを使いたい remixがなんか対応してないらしい？？
-    const r = await context.contentRepository.completeMultipartUploading(
-        new ContentId.External(id),
-        {
-            ...pick(details, "title", "artist", "genre", "comment"),
-            bpmRange: { min: details.minBPM, max: details.maxBPM },
-            dateJst: new Date(details.year, details.month, details.day),
-            license,
-        },
-        parts.map((p) => ({ partNumber: p.part_number, etag: p.etag }))
-    );
+    const r = await context.contentRepository.completeMultipartUploading(new ContentId.External(id), {
+        ...pick(details, "title", "artist", "genre", "comment"),
+        bpmRange: { min: details.minBPM, max: details.maxBPM },
+        dateJst: new Date(details.year, details.month, details.day),
+        license,
+    });
     r.neutralize();
 }

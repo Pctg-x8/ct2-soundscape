@@ -29,3 +29,9 @@ export const pendingUploads = sqliteTable("pendingUploads", {
     r2MultipartKey: text("r2_multipart_key").notNull(),
     r2MultipartUploadId: text("r2_multipart_upload_id").notNull(),
 });
+
+export const uploadedParts = sqliteTable("uploadedParts", {
+    contentId: integer("content_id").primaryKey(),
+    partNumber: integer("part_number").notNull(),
+    etag: text("etag").notNull(),
+});

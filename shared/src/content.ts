@@ -65,12 +65,11 @@ export interface ContentAdminRepository extends ContentRepository {
 
 export interface ContentAdminMultipartRepository extends ContentAdminRepository {
     beginMultipartUploading(contentType: string): Promise<ReversibleOperation<ContentId.External>>;
-    uploadPart(contentId: ContentId.Untyped, partNumber: number, data: ArrayBuffer): Promise<R2UploadedPart>;
+    uploadPart(contentId: ContentId.Untyped, partNumber: number, data: ArrayBuffer): Promise<void>;
     abortMultipartUploading(contentId: ContentId.Untyped): Promise<ReversibleOperation>;
     completeMultipartUploading(
         contentId: ContentId.Untyped,
-        details: AddedContentDetails,
-        parts: R2UploadedPart[]
+        details: AddedContentDetails
     ): Promise<ReversibleOperation>;
 }
 
@@ -278,17 +277,21 @@ export class CloudflareContentAdminRepository
         }
     }
 
-    async uploadPart(contentId: ContentId.Untyped, partNumber: number, data: ArrayBuffer): Promise<R2UploadedPart> {
-        const r = await this.connectInfoStore().query.pendingUploads.findFirst({
-            where: eq(schema.pendingUploads.contentId, contentId.toInternal(this.idObfuscator).value),
+    async uploadPart(contentId: ContentId.Untyped, partNumber: number, data: ArrayBuffer): Promise<void> {
+        const internalId = contentId.toInternal(this.idObfuscator).value;
+        const db = this.connectInfoStore();
+        const r = await db.query.pendingUploads.findFirst({
+            where: eq(schema.pendingUploads.contentId, internalId),
         });
         if (!r) {
             throw new Error(`#${contentId.value} has no started multipart uploading`);
         }
 
-        return await this.objectStore
+        const part = await this.objectStore
             .resumeMultipartUpload(r.r2MultipartKey, r.r2MultipartUploadId)
             .uploadPart(partNumber, data);
+
+        await db.insert(schema.uploadedParts).values({ contentId: internalId, ...part });
     }
 
     async abortMultipartUploading(contentId: ContentId.Untyped): Promise<ReversibleOperation> {
@@ -317,8 +320,7 @@ export class CloudflareContentAdminRepository
 
     async completeMultipartUploading(
         contentId: ContentId.Untyped,
-        details: AddedContentDetails,
-        parts: R2UploadedPart[]
+        details: AddedContentDetails
     ): Promise<ReversibleOperation> {
         const internalId = contentId.toInternal(this.idObfuscator).value;
         const db = this.connectInfoStore();
@@ -332,13 +334,24 @@ export class CloudflareContentAdminRepository
                 await this.connectInfoStore().insert(schema.pendingUploads).values(r);
             });
         };
+        const takeParts = async () => {
+            const xs = await db
+                .delete(schema.uploadedParts)
+                .where(eq(schema.uploadedParts.contentId, internalId))
+                .returning();
 
+            return new ReversibleOperation(xs, async () => {
+                await this.connectInfoStore().insert(schema.uploadedParts).values(xs);
+            });
+        };
+
+        const [keys, parts] = await Promise.all([take(), takeParts()]);
         // TODO: ほんとうはawait usingを使いたい wranglerが対応してない
-        const r = await take();
+        const r = keys.combineDrop(parts);
         try {
             await this.objectStore
-                .resumeMultipartUpload(r.value.r2MultipartKey, r.value.r2MultipartUploadId)
-                .complete(parts);
+                .resumeMultipartUpload(keys.value.r2MultipartKey, keys.value.r2MultipartUploadId)
+                .complete(parts.value);
 
             await db.insert(schema.details).values({
                 id: internalId,
