@@ -26,6 +26,21 @@ export class ReversibleOperation<T = void> implements AsyncDisposable {
         return op2;
     }
 
+    combineWith<U, V>(other: ReversibleOperation<U>, combiner: (t: T, u: U) => V): ReversibleOperation<V> {
+        const r = new ReversibleOperation(combiner(this.value, other.value), async () => {
+            await other.rollback?.();
+            await this.rollback?.();
+        });
+        this.neutralize();
+        other.neutralize();
+
+        return r;
+    }
+
+    combineDrop(other: ReversibleOperation<unknown>): ReversibleOperation {
+        return this.combineWith(other, () => void 0);
+    }
+
     async [Symbol.asyncDispose]() {
         await this.rollback?.();
     }

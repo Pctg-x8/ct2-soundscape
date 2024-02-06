@@ -25,6 +25,7 @@ export type ContentDetails = {
     readonly license: License.Type;
 };
 export type IdentifiedContentDetails = ContentDetails & { readonly id: ContentId.External };
+export type AddedContentDetails = Omit<ContentDetails, "downloadCount">;
 
 export type ContentDownloadInfo = {
     readonly title: string;
@@ -47,16 +48,8 @@ export interface ContentRepository {
 }
 
 export interface ContentAdminRepository extends ContentRepository {
-    add(
-        details: Omit<ContentDetails, "downloadCount">,
-        contentType: string,
-        content: File
-    ): Promise<ContentId.External>;
-    add(
-        details: Omit<ContentDetails, "downloadCount">,
-        contentType: string,
-        contentStream: ReadableStream
-    ): Promise<ContentId.External>;
+    add(details: AddedContentDetails, contentType: string, content: File): Promise<ContentId.External>;
+    add(details: AddedContentDetails, contentType: string, contentStream: ReadableStream): Promise<ContentId.External>;
 
     update(id: ContentId.Untyped, details: Partial<ContentDetails>): Promise<void>;
     update(id: ContentId.Untyped, details: Partial<ContentDetails>, contentType: string, content: File): Promise<void>;
@@ -74,7 +67,11 @@ export interface ContentAdminMultipartRepository extends ContentAdminRepository 
     beginMultipartUploading(contentType: string): Promise<ReversibleOperation<ContentId.External>>;
     uploadPart(contentId: ContentId.Untyped, partNumber: number, data: ArrayBuffer): Promise<R2UploadedPart>;
     abortMultipartUploading(contentId: ContentId.Untyped): Promise<ReversibleOperation>;
-    completeMultipartUploading(contentId: ContentId.Untyped, parts: R2UploadedPart[]): Promise<ReversibleOperation>;
+    completeMultipartUploading(
+        contentId: ContentId.Untyped,
+        details: AddedContentDetails,
+        parts: R2UploadedPart[]
+    ): Promise<ReversibleOperation>;
 }
 
 export class CloudflareContentRepository implements ContentRepository {
@@ -172,7 +169,7 @@ export class CloudflareContentAdminRepository
     implements ContentAdminMultipartRepository
 {
     async add(
-        details: Omit<ContentDetails, "downloadCount">,
+        details: AddedContentDetails,
         contentType: string,
         content: File | ReadableStream
     ): Promise<ContentId.External> {
@@ -181,18 +178,7 @@ export class CloudflareContentAdminRepository
 
         const [inserted] = await db
             .insert(schema.details)
-            .values([
-                {
-                    ...pick(details, "title", "artist", "genre", "comment"),
-                    year: details.dateJst.getFullYear(),
-                    month: details.dateJst.getMonth() + 1,
-                    day: details.dateJst.getDate(),
-                    minBPM: details.bpmRange.min,
-                    maxBPM: details.bpmRange.max,
-                    licenseType,
-                    licenseText,
-                },
-            ])
+            .values(CloudflareContentAdminRepository.buildInsertRecord(details))
             .returning({ id: schema.details.id });
 
         try {
@@ -331,11 +317,13 @@ export class CloudflareContentAdminRepository
 
     async completeMultipartUploading(
         contentId: ContentId.Untyped,
+        details: AddedContentDetails,
         parts: R2UploadedPart[]
     ): Promise<ReversibleOperation> {
         const internalId = contentId.toInternal(this.idObfuscator).value;
+        const db = this.connectInfoStore();
         const take = async () => {
-            const [r] = await this.connectInfoStore()
+            const [r] = await db
                 .delete(schema.pendingUploads)
                 .where(eq(schema.pendingUploads.contentId, internalId))
                 .returning();
@@ -352,9 +340,33 @@ export class CloudflareContentAdminRepository
                 .resumeMultipartUpload(r.value.r2MultipartKey, r.value.r2MultipartUploadId)
                 .complete(parts);
 
-            return r.moveoutWithValue(void 0);
+            await db.insert(schema.details).values({
+                id: internalId,
+                ...CloudflareContentAdminRepository.buildInsertRecord(details),
+            });
+
+            return r.combineDrop(
+                new ReversibleOperation(undefined, async () => {
+                    await this.connectInfoStore().delete(schema.details).where(eq(schema.details.id, internalId));
+                })
+            );
         } finally {
             await r[Symbol.asyncDispose]();
         }
+    }
+
+    private static buildInsertRecord(x: AddedContentDetails): schema.DetailsInsert {
+        const [licenseType, licenseText] = License.toDBValues(x.license);
+
+        return {
+            ...pick(x, "title", "artist", "genre", "comment"),
+            year: x.dateJst.getFullYear(),
+            month: x.dateJst.getMonth() + 1,
+            day: x.dateJst.getDate(),
+            minBPM: x.bpmRange.min,
+            maxBPM: x.bpmRange.max,
+            licenseType,
+            licenseText,
+        };
     }
 }
