@@ -1,4 +1,4 @@
-import { LoaderFunctionArgs } from "@remix-run/server-runtime";
+import { type LoaderFunctionArgs } from "@remix-run/server-runtime";
 import { ContentId } from "soundscape-shared/src/content/id";
 import * as z from "zod";
 

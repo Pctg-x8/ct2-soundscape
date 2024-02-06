@@ -1,4 +1,4 @@
-import { LoaderFunctionArgs, json } from "@remix-run/server-runtime";
+import { type LoaderFunctionArgs, json } from "@remix-run/server-runtime";
 
 export async function loader({ context, request }: LoaderFunctionArgs) {
     const contentType = request.headers.get("content-type");

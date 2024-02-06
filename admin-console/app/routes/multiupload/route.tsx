@@ -11,6 +11,7 @@ import { License } from "soundscape-shared/src/valueObjects/license";
 import * as zfd from "zod-form-data";
 import * as z from "zod";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
+import { convertLicenseInput } from "src/conversion";
 
 export const meta: MetaDescriptor[] = [{ title: "Multiple Uploader - Soundscape (Admin Console)" }];
 
@@ -34,24 +35,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
         file: zfd.file(),
     });
     const input = inputSchema.parse(body);
-
-    let license: License.Type;
-    switch (input.licenseType) {
-        case License.PublicDomain:
-        case License.CreativeCommons4.BY:
-        case License.CreativeCommons4.BY_SA:
-        case License.CreativeCommons4.BY_NC:
-        case License.CreativeCommons4.BY_ND:
-        case License.CreativeCommons4.BY_NC_SA:
-        case License.CreativeCommons4.BY_NC_ND:
-            license = input.licenseType;
-            break;
-        case 999:
-            license = input.licenseText;
-            break;
-        default:
-            throw new Error("invalid license input");
-    }
+    const license = convertLicenseInput(input);
 
     const id = await context.contentRepository.add(
         {

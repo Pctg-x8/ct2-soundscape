@@ -1,4 +1,4 @@
-import { ActionFunctionArgs, json } from "@remix-run/server-runtime";
+import { type ActionFunctionArgs, json } from "@remix-run/server-runtime";
 import { ContentId } from "soundscape-shared/src/content/id";
 
 export async function action({ params, request, context }: ActionFunctionArgs) {
