@@ -1,6 +1,9 @@
-import { type LoaderFunctionArgs, json } from "@remix-run/server-runtime";
+import { json, type ActionFunctionArgs } from "@remix-run/server-runtime";
+import * as z from "zod";
 
-export async function loader({ context, request }: LoaderFunctionArgs) {
+export const ReturnSchema = z.object({ id: z.number() });
+
+export async function action({ context, request }: ActionFunctionArgs) {
     const contentType = request.headers.get("content-type");
     if (!contentType) {
         throw new Response("content-type is mandatory", { status: 400 });

@@ -5,13 +5,15 @@ import {
     unstable_parseMultipartFormData,
     json,
 } from "@remix-run/cloudflare";
-import { useRef, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 import { readFileMetadata } from "src/contentReader";
 import { License } from "soundscape-shared/src/valueObjects/license";
 import * as zfd from "zod-form-data";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
 import * as z from "zod";
 import { convertLicenseInput } from "src/conversion";
+import { ReturnSchema } from "../cmd.upload.begin/route";
+import { type CompleteBodyData } from "../cmd.upload.$id.complete/route";
 
 export const meta: MetaDescriptor[] = [{ title: "Uploader - Soundscape (Admin Console)" }];
 
@@ -49,6 +51,56 @@ export async function action({ request, context }: ActionFunctionArgs) {
     );
 
     return json({ success: id.value });
+}
+
+const FormDataSchema = zfd.formData({
+    title: zfd.text(),
+    artist: zfd.text(),
+    genre: zfd.text(),
+    minBPM: zfd.numeric(),
+    maxBPM: zfd.numeric(),
+    comment: zfd.text(z.string().optional()).transform((x) => x ?? ""),
+    time: zfd.text().transform((x) => new Date(x)),
+    licenseType: zfd.numeric(),
+    licenseText: zfd.text(z.string().optional()).transform((x) => x ?? ""),
+});
+
+async function uploadMultiparted(
+    content: Blob,
+    details: typeof FormDataSchema._output,
+    progress: (sentBytes: number) => void
+): Promise<void> {
+    const PART_SIZE = 8 * 1024 * 1024;
+
+    progress(0);
+    const initResponse = await fetch("/cmd/upload/begin", { method: "POST", headers: { "content-type": content.type } })
+        .then((r) => r.json())
+        .then(ReturnSchema.parse);
+
+    let partNumber = 0;
+    while (partNumber * PART_SIZE < content.size) {
+        progress(partNumber * PART_SIZE);
+        const part = content.slice(partNumber * PART_SIZE, (partNumber + 1) * PART_SIZE);
+        await fetch(`/cmd/upload/${initResponse.id}/${partNumber + 1}`, { method: "POST", body: part });
+        partNumber++;
+    }
+
+    progress(partNumber * PART_SIZE);
+
+    const leftSize = content.size - partNumber * PART_SIZE;
+    if (leftSize > 0) {
+        const part = content.slice(partNumber * PART_SIZE, content.size);
+        await fetch(`/cmd/upload/${initResponse.id}/${partNumber + 1}`, { method: "POST", body: part });
+        progress(content.size);
+    }
+
+    const detailsData: CompleteBodyData = {
+        ...pick(details, "title", "artist", "genre", "minBPM", "maxBPM", "comment", "licenseType", "licenseText"),
+        year: details.time.getFullYear(),
+        month: details.time.getMonth() + 1,
+        day: details.time.getDate(),
+    };
+    await fetch(`/cmd/upload/${initResponse.id}/complete`, { method: "POST", body: JSON.stringify(detailsData) });
 }
 
 export default function Page() {
@@ -91,10 +143,32 @@ export default function Page() {
         });
     };
 
+    const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const data = new FormData(e.target as HTMLFormElement);
+        const file = data.get("file") as File;
+        if (!file) {
+            throw new Error("File is empty");
+        }
+
+        await uploadMultiparted(file, FormDataSchema.parse(data), (sentBytes) => {
+            console.log("sentBytes", sentBytes, file.size);
+        });
+    };
+
     return (
         <article id="UploadForm">
             <h1>ファイルアップロード</h1>
-            <Form method="post" encType="multipart/form-data" replace className="contentForm" ref={form}>
+            <Form
+                method="post"
+                encType="multipart/form-data"
+                replace
+                className="contentForm"
+                ref={form}
+                onSubmit={onSubmit}
+            >
                 <fieldset disabled={isPending}>
                     <section>
                         <label htmlFor="title">タイトル</label>
