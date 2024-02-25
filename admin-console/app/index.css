@@ -139,8 +139,9 @@ nav {
 
 .multiUploadEntry {
     border: solid 1px #ccc;
+    position: relative;
 
-    & > summary {
+    & > details > summary {
         display: flex;
         flex-direction: row;
         align-items: baseline;
@@ -160,5 +161,19 @@ nav {
         & .success {
             color: #0c3;
         }
+
+        & .failed {
+            color: #c00;
+        }
+    }
+
+    & > .progressOverlay {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 4px;
+        background: #0bf;
+
+        transition: width 0.2s ease;
     }
 }

@@ -1,55 +1,33 @@
-import { type MetaDescriptor, useFetcher } from "@remix-run/react";
-import {
-    unstable_createMemoryUploadHandler,
-    type ActionFunctionArgs,
-    unstable_parseMultipartFormData,
-    json,
-} from "@remix-run/cloudflare";
-import { type DragEvent, useEffect, useRef, useState, useCallback } from "react";
+import { Form, type MetaDescriptor } from "@remix-run/react";
+import { type DragEvent, useEffect, useRef, useState, useCallback, type FormEvent } from "react";
 import { readFileMetadata } from "src/contentReader";
 import { License } from "soundscape-shared/src/valueObjects/license";
 import * as zfd from "zod-form-data";
 import * as z from "zod";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
-import { convertLicenseInput } from "src/conversion";
+import { type CompleteBodyData } from "../cmd.upload.$id.complete/route";
+import { guard } from "src/promiseWrapper";
+import { uploadMultiparted } from "src/multipartUploader";
 
 export const meta: MetaDescriptor[] = [{ title: "Multiple Uploader - Soundscape (Admin Console)" }];
 
-export async function action({ request, context }: ActionFunctionArgs) {
-    // TODO: 本来R2にはストリーミングputのAPIがあるんだけど、AsyncIterable->ReadableStreamの方法が存在しないので一旦メモリに貯める
-    const body = await unstable_parseMultipartFormData(
-        request,
-        unstable_createMemoryUploadHandler({ maxPartSize: 100 * 1024 * 1024 })
-    );
+type SubmitState =
+    | undefined
+    | { readonly state: "Pending"; readonly sentBytes: number; readonly totalBytes: number }
+    | { readonly state: "Success"; readonly id: number }
+    | { readonly state: "Failed" };
 
-    const inputSchema = zfd.formData({
-        title: zfd.text(),
-        artist: zfd.text(),
-        genre: zfd.text(),
-        minBPM: zfd.numeric(),
-        maxBPM: zfd.numeric(),
-        comment: zfd.text(z.string().optional()).transform((x) => x ?? ""),
-        time: zfd.text().transform((x) => new Date(x)),
-        licenseType: zfd.numeric(),
-        licenseText: zfd.text(z.string().optional()).transform((x) => x ?? ""),
-        file: zfd.file(),
-    });
-    const input = inputSchema.parse(body);
-    const license = convertLicenseInput(input);
-
-    const id = await context.contentRepository.add(
-        {
-            ...pick(input, "title", "artist", "genre", "comment"),
-            bpmRange: { min: input.minBPM, max: input.maxBPM },
-            dateJst: input.time,
-            license,
-        },
-        input.file.type,
-        input.file
-    );
-
-    return json({ success: id.value });
-}
+const FormDataSchema = zfd.formData({
+    title: zfd.text(),
+    artist: zfd.text(),
+    genre: zfd.text(),
+    minBPM: zfd.numeric(),
+    maxBPM: zfd.numeric(),
+    comment: zfd.text(z.string().optional()).transform((x) => x ?? ""),
+    time: zfd.text().transform((x) => new Date(x)),
+    licenseType: zfd.numeric(),
+    licenseText: zfd.text(z.string().optional()).transform((x) => x ?? ""),
+});
 
 async function recursiveQueryAllFiles(dir: FileSystemDirectoryEntry): Promise<File[]> {
     const entries = await new Promise<FileSystemEntry[]>((resolve, reject) =>
@@ -167,8 +145,8 @@ function Entry({
     readonly registerSubmission: (identifier: number, submit: () => void) => void;
     readonly unregisterSubmission: (identifier: number) => void;
 }) {
-    const f = useFetcher<typeof action>();
-    const isPending = f.state == "submitting";
+    const [result, setResult] = useState<SubmitState>(undefined);
+    const [isPending, setIsPending] = useState(false);
 
     const formid = `uploadForm-${identifier}`;
 
@@ -193,25 +171,28 @@ function Entry({
         setTitle("");
         setArtist("");
 
-        await readFileMetadata(file.current, {
-            onLastModifiedDate(d) {
-                timeInput.value = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d
-                    .getDate()
-                    .toString()
-                    .padStart(2, "0")}`;
-            },
-            onTitle(value) {
-                titleInput.value = value;
-                setTitle(value);
-            },
-            onArtist(value) {
-                artistInput.value = value;
-                setArtist(value);
-            },
-            onGenre(value) {
-                genreInput.value = value;
-            },
-        });
+        await guard(
+            setIsPending,
+            readFileMetadata(file.current, {
+                onLastModifiedDate(d) {
+                    timeInput.value = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d
+                        .getDate()
+                        .toString()
+                        .padStart(2, "0")}`;
+                },
+                onTitle(value) {
+                    titleInput.value = value;
+                    setTitle(value);
+                },
+                onArtist(value) {
+                    artistInput.value = value;
+                    setArtist(value);
+                },
+                onGenre(value) {
+                    genreInput.value = value;
+                },
+            })
+        );
     };
 
     useEffect(() => {
@@ -229,24 +210,78 @@ function Entry({
     // registers submission operation to container component
     useEffect(() => {
         registerSubmission(identifier, () => {
-            if (f.data !== undefined) return;
-            if (f.state !== "idle") return;
+            if (result !== undefined) return;
+            if (isPending) return;
 
             form.current?.requestSubmit();
         });
 
         return () => unregisterSubmission(identifier);
-    }, [identifier, registerSubmission, unregisterSubmission, f]);
+    }, [identifier, registerSubmission, unregisterSubmission, result, isPending]);
 
-    return (
-        <details className="multiUploadEntry">
-            <summary>
-                <p className="titles">
-                    {artist} - {title}
-                </p>
-                {f.data?.success ? (
-                    <p className="success">#{f.data.success}</p>
-                ) : (
+    const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const data = new FormData(e.target as HTMLFormElement);
+        const file = data.get("file") as File;
+        if (!file) {
+            throw new Error("File is empty");
+        }
+
+        const parsedData = FormDataSchema.parse(data);
+        const details: CompleteBodyData = {
+            ...pick(
+                parsedData,
+                "title",
+                "artist",
+                "genre",
+                "minBPM",
+                "maxBPM",
+                "comment",
+                "licenseType",
+                "licenseText"
+            ),
+            year: parsedData.time.getFullYear(),
+            month: parsedData.time.getMonth() + 1,
+            day: parsedData.time.getDate(),
+        };
+
+        await guard(
+            setIsPending,
+            uploadMultiparted(file, details, (sentBytes) => {
+                setResult({ state: "Pending", sentBytes, totalBytes: file.size });
+                console.log("sentBytes", sentBytes, file.size);
+            }).then(
+                (id) => {
+                    setResult({ state: "Success", id });
+                },
+                (e) => {
+                    console.error(e);
+                    setResult({ state: "Failed" });
+                }
+            )
+        );
+    };
+
+    const right = (() => {
+        switch (result?.state) {
+            case "Success":
+                return <p className="success">#{result.id}</p>;
+            case "Failed":
+                return (
+                    <>
+                        <p className="failed">FAILED</p>
+                        <button type="submit" className="positive" form={formid}>
+                            登録
+                        </button>
+                        <button type="button" onClick={onCancel}>
+                            登録せず削除
+                        </button>
+                    </>
+                );
+            default:
+                return (
                     <>
                         <button type="submit" className="positive" form={formid} disabled={isPending}>
                             登録
@@ -255,95 +290,125 @@ function Entry({
                             登録せず削除
                         </button>
                     </>
-                )}
-            </summary>
-            <f.Form method="post" encType="multipart/form-data" className="contentForm" ref={form} id={formid}>
-                <fieldset disabled={isPending || (Boolean(f.data?.success) ?? false)}>
-                    <section>
-                        <label htmlFor="title">タイトル</label>
-                        <input id="title" name="title" onChange={(e) => setTitle(e.currentTarget.value)} required />
-                    </section>
-                    <section>
-                        <label htmlFor="artist">アーティスト表記名</label>
-                        <input id="artist" name="artist" onChange={(e) => setArtist(e.currentTarget.value)} required />
-                    </section>
-                    <section>
-                        <label htmlFor="genre">ジャンル</label>
-                        <input id="genre" name="genre" required />
-                    </section>
-                    <section>
-                        <p className="labelLike">BPM範囲</p>
-                        <section className="inputGroup">
+                );
+        }
+    })();
+
+    return (
+        <section className="multiUploadEntry">
+            <details>
+                <summary>
+                    <p className="titles">
+                        {artist} - {title}
+                    </p>
+                    {right}
+                </summary>
+                <Form
+                    method="post"
+                    encType="multipart/form-data"
+                    className="contentForm"
+                    ref={form}
+                    id={formid}
+                    onSubmit={onSubmit}
+                >
+                    <fieldset disabled={isPending || result?.state === "Success"}>
+                        <section>
+                            <label htmlFor="title">タイトル</label>
+                            <input id="title" name="title" onChange={(e) => setTitle(e.currentTarget.value)} required />
+                        </section>
+                        <section>
+                            <label htmlFor="artist">アーティスト表記名</label>
                             <input
-                                name="minBPM"
-                                type="number"
-                                defaultValue={120}
-                                min={1}
-                                className="bpmInputBox"
-                                required
-                            />
-                            〜
-                            <input
-                                name="maxBPM"
-                                type="number"
-                                defaultValue={120}
-                                min={1}
-                                className="bpmInputBox"
+                                id="artist"
+                                name="artist"
+                                onChange={(e) => setArtist(e.currentTarget.value)}
                                 required
                             />
                         </section>
-                    </section>
-                    <section>
-                        <label htmlFor="time">制作日</label>
-                        <input id="time" name="time" type="date" required />
-                    </section>
-                    <section>
-                        <label htmlFor="comment">コメント（Markdown可）</label>
-                        <textarea id="comment" name="comment" rows={1} />
-                    </section>
-                    <section>
-                        <label htmlFor="file">ファイル</label>
-                        <input
-                            id="file"
-                            name="file"
-                            type="file"
-                            accept="audio/*"
-                            required
-                            onChange={(e) => {
-                                file.current = e.currentTarget.files?.item(0) ?? null;
-                            }}
-                        />
-                        <button type="button" onClick={onAutoInputClicked}>
-                            ファイルから自動入力
-                        </button>
-                    </section>
-                    <section>
-                        <label htmlFor="licenseType">ライセンス形態</label>
-                        <div className="licenseInputs">
-                            <select
-                                id="licenseType"
-                                name="licenseType"
-                                onChange={(e) => setCurrentLicenseSelection(Number(e.currentTarget.value))}
-                            >
-                                <option value={License.PublicDomain}>CC0</option>
-                                <option value={License.CreativeCommons4.BY}>CC-BY</option>
-                                <option value={License.CreativeCommons4.BY_SA}>CC-BY-SA</option>
-                                <option value={License.CreativeCommons4.BY_NC}>CC-BY-NC</option>
-                                <option value={License.CreativeCommons4.BY_NC_SA}>CC-BY-NC-SA</option>
-                                <option value={License.CreativeCommons4.BY_NC_ND}>CC-BY-NC-ND</option>
-                                <option value={License.CreativeCommons4.BY_ND}>CC-BY-ND</option>
-                                <option value={999}>その他</option>
-                            </select>
-                            <input name="licenseText" disabled={currentLicenseSelection !== 999} />
-                        </div>
-                    </section>
-                    <section className="buttons">
-                        <button type="reset" className="negative">
-                            入力内容をリセット
-                        </button>
-                    </section>
-                </fieldset>
-            </f.Form>
-        </details>
+                        <section>
+                            <label htmlFor="genre">ジャンル</label>
+                            <input id="genre" name="genre" required />
+                        </section>
+                        <section>
+                            <p className="labelLike">BPM範囲</p>
+                            <section className="inputGroup">
+                                <input
+                                    name="minBPM"
+                                    type="number"
+                                    defaultValue={120}
+                                    min={1}
+                                    className="bpmInputBox"
+                                    required
+                                />
+                                〜
+                                <input
+                                    name="maxBPM"
+                                    type="number"
+                                    defaultValue={120}
+                                    min={1}
+                                    className="bpmInputBox"
+                                    required
+                                />
+                            </section>
+                        </section>
+                        <section>
+                            <label htmlFor="time">制作日</label>
+                            <input id="time" name="time" type="date" required />
+                        </section>
+                        <section>
+                            <label htmlFor="comment">コメント（Markdown可）</label>
+                            <textarea id="comment" name="comment" rows={1} />
+                        </section>
+                        <section>
+                            <label htmlFor="file">ファイル</label>
+                            <input
+                                id="file"
+                                name="file"
+                                type="file"
+                                accept="audio/*"
+                                required
+                                onChange={(e) => {
+                                    file.current = e.currentTarget.files?.item(0) ?? null;
+                                }}
+                            />
+                            <button type="button" onClick={onAutoInputClicked}>
+                                ファイルから自動入力
+                            </button>
+                        </section>
+                        <section>
+                            <label htmlFor="licenseType">ライセンス形態</label>
+                            <div className="licenseInputs">
+                                <select
+                                    id="licenseType"
+                                    name="licenseType"
+                                    onChange={(e) => setCurrentLicenseSelection(Number(e.currentTarget.value))}
+                                >
+                                    <option value={License.PublicDomain}>CC0</option>
+                                    <option value={License.CreativeCommons4.BY}>CC-BY</option>
+                                    <option value={License.CreativeCommons4.BY_SA}>CC-BY-SA</option>
+                                    <option value={License.CreativeCommons4.BY_NC}>CC-BY-NC</option>
+                                    <option value={License.CreativeCommons4.BY_NC_SA}>CC-BY-NC-SA</option>
+                                    <option value={License.CreativeCommons4.BY_NC_ND}>CC-BY-NC-ND</option>
+                                    <option value={License.CreativeCommons4.BY_ND}>CC-BY-ND</option>
+                                    <option value={999}>その他</option>
+                                </select>
+                                <input name="licenseText" disabled={currentLicenseSelection !== 999} />
+                            </div>
+                        </section>
+                        <section className="buttons">
+                            <button type="reset" className="negative">
+                                入力内容をリセット
+                            </button>
+                        </section>
+                    </fieldset>
+                </Form>
+            </details>
+            {result?.state === "Pending" ? (
+                <div
+                    className="progressOverlay"
+                    style={{ width: (100 * result.sentBytes) / result.totalBytes + "%" }}
+                />
+            ) : undefined}
+        </section>
     );
 }

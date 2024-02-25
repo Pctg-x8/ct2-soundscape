@@ -5,8 +5,9 @@ import { License } from "soundscape-shared/src/valueObjects/license";
 import * as zfd from "zod-form-data";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
 import * as z from "zod";
-import { ReturnSchema } from "../cmd.upload.begin/route";
 import { type CompleteBodyData } from "../cmd.upload.$id.complete/route";
+import { guard } from "src/promiseWrapper";
+import { uploadMultiparted } from "src/multipartUploader";
 
 export const meta: MetaDescriptor[] = [{ title: "Uploader - Soundscape (Admin Console)" }];
 
@@ -27,71 +28,6 @@ const FormDataSchema = zfd.formData({
     licenseType: zfd.numeric(),
     licenseText: zfd.text(z.string().optional()).transform((x) => x ?? ""),
 });
-
-class PendingUpload {
-    static async begin(contentType: string): Promise<PendingUpload> {
-        const r = await fetch("/cmd/upload/begin", { method: "POST", headers: { "content-type": contentType } });
-        if (!r.ok) throw new Error(r.statusText);
-
-        const { id } = ReturnSchema.parse(await r.json());
-
-        return new PendingUpload(id);
-    }
-
-    constructor(private readonly tempId: number) {}
-
-    async uploadPart(partNumber: number, data: Blob): Promise<void> {
-        const r = await fetch(`/cmd/upload/${this.tempId}/${partNumber}`, { method: "POST", body: data });
-        if (!r.ok) throw new Error(r.statusText);
-    }
-
-    async complete(details: CompleteBodyData): Promise<number> {
-        const r = await fetch(`/cmd/upload/${this.tempId}/complete`, { method: "POST", body: JSON.stringify(details) });
-        if (!r.ok) throw new Error(r.statusText);
-
-        return this.tempId;
-    }
-}
-
-async function uploadMultiparted(
-    content: Blob,
-    details: z.infer<typeof FormDataSchema>,
-    progress: (sentBytes: number) => void
-): Promise<number> {
-    const PART_SIZE = 8 * 1024 * 1024;
-
-    progress(0);
-    const tempContent = await PendingUpload.begin(content.type);
-
-    let partNumber = 0;
-    while (partNumber * PART_SIZE < content.size) {
-        const part = content.slice(partNumber * PART_SIZE, (partNumber + 1) * PART_SIZE);
-        const op = tempContent.uploadPart(partNumber + 1, part);
-        progress(partNumber * PART_SIZE);
-        await op;
-        partNumber++;
-    }
-
-    const leftSize = content.size - partNumber * PART_SIZE;
-    const finalOp =
-        leftSize > 0
-            ? tempContent.uploadPart(partNumber + 1, content.slice(partNumber * PART_SIZE, content.size))
-            : Promise.resolve();
-    progress(content.size);
-    await finalOp;
-
-    return await tempContent.complete({
-        ...pick(details, "title", "artist", "genre", "minBPM", "maxBPM", "comment", "licenseType", "licenseText"),
-        year: details.time.getFullYear(),
-        month: details.time.getMonth() + 1,
-        day: details.time.getDate(),
-    });
-}
-
-export async function guard(observer: (loading: boolean) => void, op: Promise<void>) {
-    observer(true);
-    await op.finally(() => observer(false));
-}
 
 export default function Page() {
     const [result, setResult] = useState<SubmitState>(undefined);
@@ -145,9 +81,27 @@ export default function Page() {
             throw new Error("File is empty");
         }
 
+        const parsedData = FormDataSchema.parse(data);
+        const details: CompleteBodyData = {
+            ...pick(
+                parsedData,
+                "title",
+                "artist",
+                "genre",
+                "minBPM",
+                "maxBPM",
+                "comment",
+                "licenseType",
+                "licenseText"
+            ),
+            year: parsedData.time.getFullYear(),
+            month: parsedData.time.getMonth() + 1,
+            day: parsedData.time.getDate(),
+        };
+
         await guard(
             setIsPending,
-            uploadMultiparted(file, FormDataSchema.parse(data), (sentBytes) => {
+            uploadMultiparted(file, details, (sentBytes) => {
                 setResult({ state: "Pending", sentBytes, totalBytes: file.size });
                 console.log("sentBytes", sentBytes, file.size);
             }).then(
