@@ -1,57 +1,20 @@
-import { Form, useActionData, type MetaDescriptor, useNavigation } from "@remix-run/react";
-import {
-    unstable_createMemoryUploadHandler,
-    type ActionFunctionArgs,
-    unstable_parseMultipartFormData,
-    json,
-} from "@remix-run/cloudflare";
+import { Form, type MetaDescriptor } from "@remix-run/react";
 import { type FormEvent, useRef, useState } from "react";
 import { readFileMetadata } from "src/contentReader";
 import { License } from "soundscape-shared/src/valueObjects/license";
 import * as zfd from "zod-form-data";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
 import * as z from "zod";
-import { convertLicenseInput } from "src/conversion";
 import { ReturnSchema } from "../cmd.upload.begin/route";
 import { type CompleteBodyData } from "../cmd.upload.$id.complete/route";
 
 export const meta: MetaDescriptor[] = [{ title: "Uploader - Soundscape (Admin Console)" }];
 
-export async function action({ request, context }: ActionFunctionArgs) {
-    // TODO: 本来R2にはストリーミングputのAPIがあるんだけど、AsyncIterable->ReadableStreamの方法が存在しないので一旦メモリに貯める
-    const body = await unstable_parseMultipartFormData(
-        request,
-        unstable_createMemoryUploadHandler({ maxPartSize: 100 * 1024 * 1024 })
-    );
-
-    const inputSchema = zfd.formData({
-        title: zfd.text(),
-        artist: zfd.text(),
-        genre: zfd.text(),
-        minBPM: zfd.numeric(),
-        maxBPM: zfd.numeric(),
-        comment: zfd.text(z.string().optional()).transform((x) => x ?? ""),
-        time: zfd.text().transform((x) => new Date(x)),
-        licenseType: zfd.numeric(),
-        licenseText: zfd.text(z.string().optional()).transform((x) => x ?? ""),
-        file: zfd.file(),
-    });
-    const input = inputSchema.parse(body);
-    const license = convertLicenseInput(input);
-
-    const id = await context.contentRepository.add(
-        {
-            ...pick(input, "title", "artist", "genre", "comment"),
-            bpmRange: { min: input.minBPM, max: input.maxBPM },
-            dateJst: input.time,
-            license,
-        },
-        input.file.type,
-        input.file
-    );
-
-    return json({ success: id.value });
-}
+type SubmitState =
+    | undefined
+    | { readonly state: "Pending"; readonly sentBytes: number; readonly totalBytes: number }
+    | { readonly state: "Success"; readonly id: number }
+    | { readonly state: "Failed" };
 
 const FormDataSchema = zfd.formData({
     title: zfd.text(),
@@ -65,48 +28,74 @@ const FormDataSchema = zfd.formData({
     licenseText: zfd.text(z.string().optional()).transform((x) => x ?? ""),
 });
 
+class PendingUpload {
+    static async begin(contentType: string): Promise<PendingUpload> {
+        const r = await fetch("/cmd/upload/begin", { method: "POST", headers: { "content-type": contentType } });
+        if (!r.ok) throw new Error(r.statusText);
+
+        const { id } = ReturnSchema.parse(await r.json());
+
+        return new PendingUpload(id);
+    }
+
+    constructor(private readonly tempId: number) {}
+
+    async uploadPart(partNumber: number, data: Blob): Promise<void> {
+        const r = await fetch(`/cmd/upload/${this.tempId}/${partNumber}`, { method: "POST", body: data });
+        if (!r.ok) throw new Error(r.statusText);
+    }
+
+    async complete(details: CompleteBodyData): Promise<number> {
+        const r = await fetch(`/cmd/upload/${this.tempId}/complete`, { method: "POST", body: JSON.stringify(details) });
+        if (!r.ok) throw new Error(r.statusText);
+
+        return this.tempId;
+    }
+}
+
 async function uploadMultiparted(
     content: Blob,
-    details: typeof FormDataSchema._output,
+    details: z.infer<typeof FormDataSchema>,
     progress: (sentBytes: number) => void
-): Promise<void> {
+): Promise<number> {
     const PART_SIZE = 8 * 1024 * 1024;
 
     progress(0);
-    const initResponse = await fetch("/cmd/upload/begin", { method: "POST", headers: { "content-type": content.type } })
-        .then((r) => r.json())
-        .then(ReturnSchema.parse);
+    const tempContent = await PendingUpload.begin(content.type);
 
     let partNumber = 0;
     while (partNumber * PART_SIZE < content.size) {
-        progress(partNumber * PART_SIZE);
         const part = content.slice(partNumber * PART_SIZE, (partNumber + 1) * PART_SIZE);
-        await fetch(`/cmd/upload/${initResponse.id}/${partNumber + 1}`, { method: "POST", body: part });
+        const op = tempContent.uploadPart(partNumber + 1, part);
+        progress(partNumber * PART_SIZE);
+        await op;
         partNumber++;
     }
 
-    progress(partNumber * PART_SIZE);
-
     const leftSize = content.size - partNumber * PART_SIZE;
-    if (leftSize > 0) {
-        const part = content.slice(partNumber * PART_SIZE, content.size);
-        await fetch(`/cmd/upload/${initResponse.id}/${partNumber + 1}`, { method: "POST", body: part });
-        progress(content.size);
-    }
+    const finalOp =
+        leftSize > 0
+            ? tempContent.uploadPart(partNumber + 1, content.slice(partNumber * PART_SIZE, content.size))
+            : Promise.resolve();
+    progress(content.size);
+    await finalOp;
 
-    const detailsData: CompleteBodyData = {
+    return await tempContent.complete({
         ...pick(details, "title", "artist", "genre", "minBPM", "maxBPM", "comment", "licenseType", "licenseText"),
         year: details.time.getFullYear(),
         month: details.time.getMonth() + 1,
         day: details.time.getDate(),
-    };
-    await fetch(`/cmd/upload/${initResponse.id}/complete`, { method: "POST", body: JSON.stringify(detailsData) });
+    });
+}
+
+export async function guard(observer: (loading: boolean) => void, op: Promise<void>) {
+    observer(true);
+    await op.finally(() => observer(false));
 }
 
 export default function Page() {
-    const a = useActionData<typeof action>();
-    const navigation = useNavigation();
-    const isPending = navigation.state == "submitting";
+    const [result, setResult] = useState<SubmitState>(undefined);
+    const [isPending, setIsPending] = useState(false);
 
     const [currentLicenseSelection, setCurrentLicenseSelection] = useState<number>(0);
     const form = useRef<HTMLFormElement>(null);
@@ -124,23 +113,26 @@ export default function Page() {
         artistInput.value = "";
         genreInput.value = "";
 
-        await readFileMetadata(file.current, {
-            onLastModifiedDate(d) {
-                timeInput.value = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d
-                    .getDate()
-                    .toString()
-                    .padStart(2, "0")}`;
-            },
-            onTitle(value) {
-                titleInput.value = value;
-            },
-            onArtist(value) {
-                artistInput.value = value;
-            },
-            onGenre(value) {
-                genreInput.value = value;
-            },
-        });
+        await guard(
+            setIsPending,
+            readFileMetadata(file.current, {
+                onLastModifiedDate(d) {
+                    timeInput.value = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d
+                        .getDate()
+                        .toString()
+                        .padStart(2, "0")}`;
+                },
+                onTitle(value) {
+                    titleInput.value = value;
+                },
+                onArtist(value) {
+                    artistInput.value = value;
+                },
+                onGenre(value) {
+                    genreInput.value = value;
+                },
+            })
+        );
     };
 
     const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -153,9 +145,21 @@ export default function Page() {
             throw new Error("File is empty");
         }
 
-        await uploadMultiparted(file, FormDataSchema.parse(data), (sentBytes) => {
-            console.log("sentBytes", sentBytes, file.size);
-        });
+        await guard(
+            setIsPending,
+            uploadMultiparted(file, FormDataSchema.parse(data), (sentBytes) => {
+                setResult({ state: "Pending", sentBytes, totalBytes: file.size });
+                console.log("sentBytes", sentBytes, file.size);
+            }).then(
+                (id) => {
+                    setResult({ state: "Success", id });
+                },
+                (e) => {
+                    console.error(e);
+                    setResult({ state: "Failed" });
+                }
+            )
+        );
     };
 
     return (
@@ -257,8 +261,28 @@ export default function Page() {
                         </button>
                     </section>
                 </fieldset>
-                {a?.success ? <article className="successPopover">#{a.success} successfully added</article> : undefined}
+                {result ? <SubmitStatePopover state={result} /> : undefined}
             </Form>
         </article>
     );
+}
+
+function SubmitStatePopover({ state }: { readonly state: NonNullable<SubmitState> }) {
+    switch (state.state) {
+        case "Pending":
+            return (
+                <article className="successPopover">
+                    Uploading {displayPercent(state.sentBytes, state.totalBytes)} ({state.sentBytes} /{" "}
+                    {state.totalBytes})...
+                </article>
+            );
+        case "Success":
+            return <article className="successPopover">#{state.id} successfully added</article>;
+        case "Failed":
+            return <article className="successPopover">uploading failed</article>;
+    }
+}
+
+function displayPercent(current: number, total: number): string {
+    return ((100 * current) / total).toFixed(2) + "%";
 }

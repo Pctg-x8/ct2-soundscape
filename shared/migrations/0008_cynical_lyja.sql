@@ -1,0 +1,1 @@
+ALTER TABLE pendingUploads ADD `state` integer NOT NULL;

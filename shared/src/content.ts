@@ -11,6 +11,7 @@ import { pick } from "./utils/typeImpl";
 import { ContentId, ContentIdObfuscator } from "./content/id";
 import { ContentStreamingUrlProvider } from "./content/streamUrlProvider";
 import { ReversibleOperation } from "./utils/ReversibleOperation";
+import { PendingUploadState } from "./valueObjects/pendingUploadState";
 
 export type NumRange = { readonly min: number; readonly max: number };
 
@@ -250,7 +251,11 @@ export class CloudflareContentAdminRepository
         const issueContentId = async () => {
             const [{ id }] = await db
                 .insert(schema.pendingUploads)
-                .values({ r2MultipartKey: "", r2MultipartUploadId: "" })
+                .values({
+                    r2MultipartKey: "",
+                    r2MultipartUploadId: "",
+                    state: PendingUploadState.toDBValue(PendingUploadState.Ongoing),
+                })
                 .returning({ id: schema.pendingUploads.contentId });
 
             return new ReversibleOperation(id, async () => {
@@ -296,19 +301,23 @@ export class CloudflareContentAdminRepository
 
     async abortMultipartUploading(contentId: ContentId.Untyped): Promise<ReversibleOperation> {
         const internalId = contentId.toInternal(this.idObfuscator).value;
-        const take = async () => {
+        const markAborted = async () => {
             const [r] = await this.connectInfoStore()
-                .delete(schema.pendingUploads)
+                .update(schema.pendingUploads)
+                .set({ state: PendingUploadState.toDBValue(PendingUploadState.Ongoing) })
                 .where(eq(schema.pendingUploads.contentId, internalId))
                 .returning();
 
             return new ReversibleOperation(r, async () => {
-                await this.connectInfoStore().insert(schema.pendingUploads).values(r);
+                await this.connectInfoStore()
+                    .update(schema.pendingUploads)
+                    .set({ state: r.state })
+                    .where(eq(schema.pendingUploads.contentId, internalId));
             });
         };
 
         // TODO: 本当はawait usingを使いたい wranglerが対応してない
-        const r = await take();
+        const r = await markAborted();
         try {
             await this.objectStore.resumeMultipartUpload(r.value.r2MultipartKey, r.value.r2MultipartUploadId).abort();
 
@@ -324,14 +333,18 @@ export class CloudflareContentAdminRepository
     ): Promise<ReversibleOperation> {
         const internalId = contentId.toInternal(this.idObfuscator).value;
         const db = this.connectInfoStore();
-        const take = async () => {
+        const markCompleted = async () => {
             const [r] = await db
-                .delete(schema.pendingUploads)
+                .update(schema.pendingUploads)
+                .set({ state: PendingUploadState.toDBValue(PendingUploadState.Completed) })
                 .where(eq(schema.pendingUploads.contentId, internalId))
                 .returning();
 
             return new ReversibleOperation(r, async () => {
-                await this.connectInfoStore().insert(schema.pendingUploads).values(r);
+                await this.connectInfoStore()
+                    .update(schema.pendingUploads)
+                    .set({ state: r.state })
+                    .where(eq(schema.pendingUploads.contentId, internalId));
             });
         };
         const takeParts = async () => {
@@ -345,7 +358,7 @@ export class CloudflareContentAdminRepository
             });
         };
 
-        const [keys, parts] = await Promise.all([take(), takeParts()]);
+        const [keys, parts] = await Promise.all([markCompleted(), takeParts()]);
         // TODO: ほんとうはawait usingを使いたい wranglerが対応してない
         const r = keys.combineDrop(parts);
         try {

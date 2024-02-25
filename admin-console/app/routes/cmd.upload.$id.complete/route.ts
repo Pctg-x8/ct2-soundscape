@@ -39,4 +39,6 @@ export async function action({ params, context, request }: ActionFunctionArgs) {
         license,
     });
     r.neutralize();
+
+    return "";
 }
