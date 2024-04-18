@@ -3,10 +3,12 @@ import { useLoaderData, useOutletContext } from "@remix-run/react";
 import { json, type LoaderFunctionArgs } from "@remix-run/server-runtime";
 import { useEffect } from "react";
 import { ContentId } from "soundscape-shared/src/content/id";
+import { createRepositoryAccess } from "src/repository";
 import Player from "~/components/Player";
 import type { Content } from "~/root";
 
-export async function loader({ params, context: { contentRepository } }: LoaderFunctionArgs) {
+export async function loader({ params, context: { env, executionContext } }: LoaderFunctionArgs) {
+    const contentRepository = createRepositoryAccess(env, executionContext);
     const id = new ContentId.External(Number(params["id"]));
     const [audioSource, details] = await Promise.all([
         contentRepository.getContentUrl(id),

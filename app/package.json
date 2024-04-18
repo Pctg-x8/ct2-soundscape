@@ -4,23 +4,23 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "build": "remix build",
-    "deploy": "remix build && wrangler deploy",
-    "dev": "remix dev --manual -c \"pnpm dev:wrangler\"",
-    "dev:wrangler": "wrangler dev --live-reload --persist-to=../.wrangler/state",
-    "local-stg": "cross-env NODE_ENV=production remix build && pnpm dev:wrangler"
+    "dev": "remix vite:dev",
+    "build": "remix vite:build",
+    "pages-dev": "wrangler pages dev --local --persist-to=../.wrangler/state",
+    "typegen": "wrangler types"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.472.0",
-    "@cloudflare/kv-asset-handler": "^0.3.0",
-    "@remix-run/cloudflare": "^2.3.1",
-    "@remix-run/css-bundle": "^2.3.1",
-    "@remix-run/node": "^2.3.1",
-    "@remix-run/react": "^2.3.1",
-    "@remix-run/serve": "^2.3.1",
-    "@remix-run/server-runtime": "^2.3.1",
-    "autoprefixer": "^10.4.16",
-    "isbot": "^3.6.8",
+    "@aws-sdk/client-s3": "^3.556.0",
+    "@cloudflare/kv-asset-handler": "^0.3.1",
+    "@remix-run/cloudflare": "^2.8.1",
+    "@remix-run/cloudflare-pages": "^2.8.1",
+    "@remix-run/css-bundle": "^2.8.1",
+    "@remix-run/node": "^2.8.1",
+    "@remix-run/react": "^2.8.1",
+    "@remix-run/serve": "^2.8.1",
+    "@remix-run/server-runtime": "^2.8.1",
+    "autoprefixer": "^10.4.19",
+    "isbot": "^3.8.0",
     "mime": "^4.0.1",
     "postcss-normalize": "^10.0.1",
     "react": "^18.2.0",
@@ -30,14 +30,16 @@
     "soundscape-shared": "workspace:^"
   },
   "devDependencies": {
-    "@remix-run/dev": "^2.3.1",
-    "@remix-run/eslint-config": "^2.3.1",
-    "@types/react": "^18.2.20",
-    "@types/react-dom": "^18.2.7",
-    "eslint": "^8.38.0",
-    "postcss-load-config": "^5.0.2",
-    "prettier": "^3.1.1",
-    "typescript": "^5.1.6"
+    "@remix-run/dev": "^2.8.1",
+    "@remix-run/eslint-config": "^2.8.1",
+    "@types/react": "^18.2.79",
+    "@types/react-dom": "^18.2.25",
+    "eslint": "^8.57.0",
+    "postcss-load-config": "^5.0.3",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.9",
+    "vite-tsconfig-paths": "^4.3.2"
   },
   "engines": {
     "node": ">=18.0.0"

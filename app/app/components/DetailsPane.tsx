@@ -30,6 +30,7 @@ export default function DetailsPane({
     return (
         <article id="DetailsPane" className={show ? "show" : undefined}>
             {data ? (
+                /* @ts-expect-error */
                 <Suspense fallback={<p>Loading...</p>}>
                     <Await resolve={data}>{(data) => <Content data={data} />}</Await>
                 </Suspense>

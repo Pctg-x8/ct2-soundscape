@@ -2,6 +2,7 @@ import type { LoaderFunctionArgs } from "@remix-run/server-runtime";
 import { ContentId } from "soundscape-shared/src/content/id";
 import Mime from "mime";
 import { _let } from "soundscape-shared/src/utils";
+import { createRepositoryAccess } from "src/repository";
 
 function getExtension(contentType: string): string | null {
     // Note: mimeだとaudio/mpegがmpgaとかいう謎の拡張子になるので例外対応する
@@ -15,7 +16,7 @@ function getExtension(contentType: string): string | null {
 
 export async function loader({ context, params }: LoaderFunctionArgs) {
     const id = new ContentId.External(Number(params["id"]));
-    const info = await context.contentRepository.download(id);
+    const info = await createRepositoryAccess(context.env, context.executionContext).download(id);
     if (!info) throw new Response("not found", { status: 404 });
 
     const suffix = _let(getExtension(info.contentType), (x) => (x === null ? "" : `.${x}`));
