@@ -13,6 +13,7 @@
     "@aws-sdk/client-s3": "^3.556.0",
     "@cloudflare/kv-asset-handler": "^0.3.1",
     "@remix-run/cloudflare": "^2.8.1",
+    "@remix-run/cloudflare-pages": "^2.8.1",
     "@remix-run/css-bundle": "^2.8.1",
     "@remix-run/node": "^2.8.1",
     "@remix-run/react": "^2.8.1",

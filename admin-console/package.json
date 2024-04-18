@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "remix vite:dev",
     "build": "remix vite:build",
-    "pages-dev": "wrangler pages dev ./build/client --local --persist-to=../.wrangler/state",
+    "pages-dev": "wrangler pages dev --local --persist-to=../.wrangler/state",
     "typegen": "wrangler types"
   },
   "dependencies": {
