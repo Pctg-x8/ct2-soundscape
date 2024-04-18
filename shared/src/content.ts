@@ -1,6 +1,5 @@
 // content model
 
-import { D1Database, R2Bucket, ReadableStream, fetch } from "@cloudflare/workers-types";
 import { License } from "./valueObjects/license";
 import * as schema from "./schema";
 import { drizzle } from "drizzle-orm/d1";

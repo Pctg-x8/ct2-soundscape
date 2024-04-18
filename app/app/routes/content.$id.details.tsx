@@ -2,11 +2,14 @@ import { json, type LoaderFunctionArgs } from "@remix-run/server-runtime";
 import { ContentId } from "soundscape-shared/src/content/id";
 import type { Details } from "~/components/DetailsPane";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
+import { createRepositoryAccess } from "src/repository";
 
 const cacheLength = 60 * 60 * 24 * 30;
 
 export async function loader({ context, params }: LoaderFunctionArgs) {
-    const result = await context.contentRepository.get(new ContentId.External(Number(params["id"])));
+    const result = await createRepositoryAccess(context.env, context.executionContext).get(
+        new ContentId.External(Number(params["id"]))
+    );
     if (!result) throw new Response("not found", { status: 404 });
 
     return json(

@@ -15,6 +15,7 @@ import { Suspense, useMemo, useReducer, useState } from "react";
 import "./root.css";
 import DetailsPane, { type Details } from "./components/DetailsPane";
 import { _let } from "soundscape-shared/src/utils";
+import { createRepositoryAccess } from "src/repository";
 
 export const links: LinksFunction = () => [
     {
@@ -36,7 +37,7 @@ export type Content = {
 
 export async function loader({ context }: LoaderFunctionArgs) {
     return defer(
-        { years: context.contentRepository.yearWithContentCount },
+        { years: createRepositoryAccess(context.env, context.executionContext).yearWithContentCount },
         { headers: new Headers({ "Cache-Control": "max-age=3600, must-revalidate" }) }
     );
 }
@@ -115,6 +116,7 @@ export default function App() {
                 <section id="MainLayout">
                     <section id="Top">
                         <section id="TopScrollContainer">
+                            {/* @ts-expect-error */}
                             <Suspense fallback={<p>Loading...</p>}>
                                 <Await resolve={years}>
                                     {(years) => (
@@ -204,6 +206,7 @@ function ItemList({
                     </div>
                     {contentGroups[y]?.opened ?? false ? (
                         <ul>
+                            {/* @ts-expect-error */}
                             <Suspense
                                 fallback={
                                     y in cachedItems
