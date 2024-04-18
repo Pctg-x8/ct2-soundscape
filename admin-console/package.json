@@ -7,7 +7,6 @@
     "dev": "remix vite:dev",
     "build": "remix vite:build",
     "pages-dev": "wrangler pages dev ./build/client --local --persist-to=../.wrangler/state",
-    "deploy": "pnpm build && wrangler deploy",
     "typegen": "wrangler types"
   },
   "dependencies": {
