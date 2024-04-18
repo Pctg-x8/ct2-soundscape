@@ -25,11 +25,15 @@ import * as z from "zod";
 
 import * as zfd from "zod-form-data";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
+import { createRepositoryAccess } from "src/repository";
 
 export const meta: MetaDescriptor[] = [{ title: "Content List - Soundscape (Admin Console)" }];
 
 export async function loader({ context }: LoaderFunctionArgs) {
-    const items: Promise<EntryTableRow[]> = context.contentRepository.allDetails.then((xs) =>
+    const items: Promise<EntryTableRow[]> = createRepositoryAccess(
+        context.env,
+        context.executionContext
+    ).allDetails.then((xs) =>
         xs.map((x) => ({
             id: x.id.value,
             title: x.title,
@@ -81,8 +85,10 @@ export async function action({ request, context }: ActionFunctionArgs) {
     );
     const input = inputSchema.parse(values);
 
+    const contentRepository = createRepositoryAccess(context.env, context.executionContext);
+
     if ("deleteAction" in input) {
-        await context.contentRepository.delete(input.deleteAction);
+        await contentRepository.delete(input.deleteAction);
         return json({ action: "delete" });
     }
 
@@ -118,10 +124,10 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
             if (input.file instanceof File) {
                 // with content replacement
-                await context.contentRepository.update(id, newDetails, input.file.type, input.file);
+                await contentRepository.update(id, newDetails, input.file.type, input.file);
             } else {
                 // preserve content
-                await context.contentRepository.update(id, newDetails);
+                await contentRepository.update(id, newDetails);
             }
 
             return json({ action: "update" });
