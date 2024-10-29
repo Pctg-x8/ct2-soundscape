@@ -3,6 +3,7 @@ import { ContentId } from "soundscape-shared/src/content/id";
 import { convertLicenseInput } from "src/conversion";
 import * as z from "zod";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
+import { createRepositoryAccess } from "src/repository";
 
 const AddedContentDetailsSchema = z.object({
     title: z.string(),
@@ -32,12 +33,15 @@ export async function action({ params, context, request }: ActionFunctionArgs) {
     const license = convertLicenseInput(details);
 
     // TODO: 本来はawait usingを使いたい remixがなんか対応してないらしい？？
-    const r = await context.contentRepository.completeMultipartUploading(new ContentId.External(id), {
-        ...pick(details, "title", "artist", "genre", "comment"),
-        bpmRange: { min: details.minBPM, max: details.maxBPM },
-        dateJst: new Date(details.year, details.month, details.day),
-        license,
-    });
+    const r = await createRepositoryAccess(context.env, context.executionContext).completeMultipartUploading(
+        new ContentId.External(id),
+        {
+            ...pick(details, "title", "artist", "genre", "comment"),
+            bpmRange: { min: details.minBPM, max: details.maxBPM },
+            dateJst: new Date(details.year, details.month, details.day),
+            license,
+        }
+    );
     r.neutralize();
 
     return "";
