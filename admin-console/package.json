@@ -1,43 +1,39 @@
 {
-  "name": "ct2-soundscape-admin-console",
-  "private": true,
-  "sideEffects": false,
-  "type": "module",
-  "scripts": {
-    "dev": "remix vite:dev",
-    "build": "remix vite:build",
-    "pages-dev": "wrangler pages dev --local --persist-to=../.wrangler/state",
-    "typegen": "wrangler types"
-  },
-  "dependencies": {
-    "@cloudflare/kv-asset-handler": "^0.3.1",
-    "@remix-run/cloudflare": "^2.8.1",
-    "@remix-run/cloudflare-pages": "^2.8.1",
-    "@remix-run/css-bundle": "^2.8.1",
-    "@remix-run/react": "^2.8.1",
-    "@remix-run/server-runtime": "^2.8.1",
-    "cookie": "^0.6.0",
-    "isbot": "latest",
-    "jwks-rsa": "^3.1.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "soundscape-shared": "workspace:^",
-    "zod": "^3.22.4",
-    "zod-form-data": "^2.0.2"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "devDependencies": {
-    "@remix-run/dev": "^2.8.1",
-    "@remix-run/serve": "^2.8.1",
-    "@types/cookie": "^0.6.0",
-    "@types/react": "^18.2.79",
-    "@types/react-dom": "^18.2.25",
-    "autoprefixer": "^10.4.19",
-    "postcss-nesting": "^12.1.1",
-    "postcss-normalize": "^10.0.1",
-    "vite": "^5.2.9",
-    "vite-tsconfig-paths": "^4.3.2"
-  }
+    "name": "ct2-soundscape-admin-console",
+    "private": true,
+    "sideEffects": false,
+    "type": "module",
+    "scripts": {
+        "dev": "remix vite:dev",
+        "build": "remix vite:build",
+        "pages-dev": "wrangler pages dev --local --persist-to=../.wrangler/state",
+        "typegen": "wrangler types"
+    },
+    "dependencies": {
+        "@cloudflare/kv-asset-handler": "^0.4",
+        "@remix-run/cloudflare": "^2",
+        "@remix-run/cloudflare-pages": "^2",
+        "@remix-run/css-bundle": "^2",
+        "@remix-run/react": "^2",
+        "@remix-run/server-runtime": "^2",
+        "cookie": "^1",
+        "isbot": "latest",
+        "jwks-rsa": "^3",
+        "react": "^18",
+        "react-dom": "^18",
+        "zod": "^4",
+        "zod-form-data": "^3"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "devDependencies": {
+        "@remix-run/dev": "^2",
+        "@remix-run/serve": "^2",
+        "@types/react": "^18",
+        "@types/react-dom": "^18",
+        "autoprefixer": "^10",
+        "postcss-nesting": "^14",
+        "postcss-normalize": "^13"
+    }
 }

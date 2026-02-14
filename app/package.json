@@ -1,47 +1,40 @@
 {
-  "name": "app",
-  "private": true,
-  "sideEffects": false,
-  "type": "module",
-  "scripts": {
-    "dev": "remix vite:dev",
-    "build": "remix vite:build",
-    "pages-dev": "wrangler pages dev --local --persist-to=../.wrangler/state",
-    "typegen": "wrangler types"
-  },
-  "dependencies": {
-    "@aws-sdk/client-s3": "^3.556.0",
-    "@cloudflare/kv-asset-handler": "^0.3.1",
-    "@remix-run/cloudflare": "^2.8.1",
-    "@remix-run/cloudflare-pages": "^2.8.1",
-    "@remix-run/css-bundle": "^2.8.1",
-    "@remix-run/node": "^2.8.1",
-    "@remix-run/react": "^2.8.1",
-    "@remix-run/serve": "^2.8.1",
-    "@remix-run/server-runtime": "^2.8.1",
-    "autoprefixer": "^10.4.19",
-    "isbot": "^3.8.0",
-    "mime": "^4.0.1",
-    "postcss-normalize": "^10.0.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-markdown": "^9.0.1",
-    "remark-gfm": "^4.0.0",
-    "soundscape-shared": "workspace:^"
-  },
-  "devDependencies": {
-    "@remix-run/dev": "^2.8.1",
-    "@remix-run/eslint-config": "^2.8.1",
-    "@types/react": "^18.2.79",
-    "@types/react-dom": "^18.2.25",
-    "eslint": "^8.57.0",
-    "postcss-load-config": "^5.0.3",
-    "prettier": "^3.2.5",
-    "typescript": "^5.4.5",
-    "vite": "^5.2.9",
-    "vite-tsconfig-paths": "^4.3.2"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
+    "name": "app",
+    "private": true,
+    "sideEffects": false,
+    "type": "module",
+    "scripts": {
+        "dev": "remix vite:dev",
+        "build": "remix vite:build",
+        "pages-dev": "wrangler pages dev --local --persist-to=../.wrangler/state",
+        "typegen": "wrangler types"
+    },
+    "dependencies": {
+        "@aws-sdk/client-s3": "^3",
+        "@cloudflare/kv-asset-handler": "^0.4",
+        "@remix-run/cloudflare": "^2",
+        "@remix-run/cloudflare-pages": "^2",
+        "@remix-run/css-bundle": "^2",
+        "@remix-run/node": "^2",
+        "@remix-run/react": "^2",
+        "@remix-run/serve": "^2",
+        "@remix-run/server-runtime": "^2",
+        "isbot": "latest",
+        "mime": "^4",
+        "react": "^18",
+        "react-dom": "^18",
+        "react-markdown": "^10",
+        "remark-gfm": "^4"
+    },
+    "devDependencies": {
+        "@remix-run/dev": "^2",
+        "@types/react": "^18",
+        "@types/react-dom": "^18",
+        "autoprefixer": "^10",
+        "postcss-load-config": "^6",
+        "postcss-normalize": "^13"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
 }

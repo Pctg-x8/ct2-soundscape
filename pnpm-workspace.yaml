@@ -1,5 +1,0 @@
-packages:
-    - "./shared"
-    - "./admin-console"
-    - "./app"
-    - "./headless-admin-console"
