@@ -264,21 +264,16 @@ export class CloudflareContentAdminRepository
             });
         };
 
-        // TODO: ほんとうはawait usingを使いたい wranglerが対応してない
-        const id = await issueContentId();
-        try {
-            const upload = await this.objectStore.createMultipartUpload(id.value.toString(), {
-                httpMetadata: { contentType },
-            });
-            await db
-                .update(schema.pendingUploads)
-                .set({ r2MultipartUploadId: upload.uploadId, r2MultipartKey: upload.key })
-                .where(eq(schema.pendingUploads.contentId, id.value));
+        await using id = await issueContentId();
+        const upload = await this.objectStore.createMultipartUpload(id.value.toString(), {
+            httpMetadata: { contentType },
+        });
+        await db
+            .update(schema.pendingUploads)
+            .set({ r2MultipartUploadId: upload.uploadId, r2MultipartKey: upload.key })
+            .where(eq(schema.pendingUploads.contentId, id.value));
 
-            return id.moveoutWithValue(new ContentId.Internal(id.value).toExternal(this.idObfuscator));
-        } finally {
-            await id[Symbol.asyncDispose]();
-        }
+        return id.moveoutWithValue(new ContentId.Internal(id.value).toExternal(this.idObfuscator));
     }
 
     async uploadPart(contentId: ContentId.Untyped, partNumber: number, data: ArrayBuffer): Promise<void> {
@@ -315,15 +310,10 @@ export class CloudflareContentAdminRepository
             });
         };
 
-        // TODO: 本当はawait usingを使いたい wranglerが対応してない
-        const r = await markAborted();
-        try {
-            await this.objectStore.resumeMultipartUpload(r.value.r2MultipartKey, r.value.r2MultipartUploadId).abort();
+        await using r = await markAborted();
+        await this.objectStore.resumeMultipartUpload(r.value.r2MultipartKey, r.value.r2MultipartUploadId).abort();
 
-            return r.moveoutWithValue(void 0);
-        } finally {
-            await r[Symbol.asyncDispose]();
-        }
+        return r.moveoutWithValue(void 0);
     }
 
     async completeMultipartUploading(
@@ -358,26 +348,21 @@ export class CloudflareContentAdminRepository
         };
 
         const [keys, parts] = await Promise.all([markCompleted(), takeParts()]);
-        // TODO: ほんとうはawait usingを使いたい wranglerが対応してない
-        const r = keys.combineDrop(parts);
-        try {
-            await this.objectStore
-                .resumeMultipartUpload(keys.value.r2MultipartKey, keys.value.r2MultipartUploadId)
-                .complete(parts.value);
+        await using r = keys.combineDrop(parts);
+        await this.objectStore
+            .resumeMultipartUpload(keys.value.r2MultipartKey, keys.value.r2MultipartUploadId)
+            .complete(parts.value);
 
-            await db.insert(schema.details).values({
-                id: internalId,
-                ...CloudflareContentAdminRepository.buildInsertRecord(details),
-            });
+        await db.insert(schema.details).values({
+            id: internalId,
+            ...CloudflareContentAdminRepository.buildInsertRecord(details),
+        });
 
-            return r.combineDrop(
-                new ReversibleOperation(undefined, async () => {
-                    await this.connectInfoStore().delete(schema.details).where(eq(schema.details.id, internalId));
-                }),
-            );
-        } finally {
-            await r[Symbol.asyncDispose]();
-        }
+        return r.combineDrop(
+            new ReversibleOperation(undefined, async () => {
+                await this.connectInfoStore().delete(schema.details).where(eq(schema.details.id, internalId));
+            }),
+        );
     }
 
     private static buildInsertRecord(x: AddedContentDetails): schema.DetailsInsert {
