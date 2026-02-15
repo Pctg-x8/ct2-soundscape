@@ -58,7 +58,7 @@ adminConsoleDeploymentJob =
       GHA.job
         [ GHA.namedAs "Checking out" $ Checkout.step Nothing,
           GHA.namedAs "Setup Node" $ SetupNode.step (SetupNode.Version "25"),
-          GHA.namedAs "Install deps" $ GHA.runStep "npm ci -w admin-console -w shared",
+          GHA.namedAs "Install deps" $ GHA.runStep "npm ci --include-workspace-root -w admin-console -w shared",
           GHA.namedAs "deploy" $ GHA.runStep "npm run deploy -w admin-console" & withDeploymentEnvironments
         ]
 
@@ -69,7 +69,7 @@ appDeploymentJob =
       GHA.job
         [ GHA.namedAs "Checking out" $ Checkout.step Nothing,
           GHA.namedAs "Setup Node" $ SetupNode.step (SetupNode.Version "25"),
-          GHA.namedAs "Install deps" $ GHA.runStep "npm ci -w app -w shared",
+          GHA.namedAs "Install deps" $ GHA.runStep "npm ci --include-workspace-root -w app -w shared",
           GHA.namedAs "deploy" $ GHA.runStep "npm run deploy -w app" & withDeploymentEnvironments
         ]
 
