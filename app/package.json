@@ -6,6 +6,7 @@
     "scripts": {
         "dev": "react-router dev",
         "build": "react-router build",
+        "wrangler:deploy": "wrangler deploy",
         "pages-dev": "wrangler pages dev --local --persist-to=../.wrangler/state",
         "typegen": "wrangler types"
     },
