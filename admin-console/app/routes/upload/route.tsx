@@ -21,10 +21,10 @@ const FormDataSchema = zfd.formData({
     genre: zfd.text(),
     minBPM: zfd.numeric(),
     maxBPM: zfd.numeric(),
-    comment: zfd.text(z.string().optional()).transform((x) => x ?? ""),
-    time: zfd.text().transform((x) => new Date(x)),
+    comment: zfd.text(z.string().optional()).transform(x => x ?? ""),
+    time: zfd.text().transform(x => new Date(x)),
     licenseType: zfd.numeric(),
-    licenseText: zfd.text(z.string().optional()).transform((x) => x ?? ""),
+    licenseText: zfd.text(z.string().optional()).transform(x => x ?? ""),
 });
 
 export default function Page() {
@@ -65,7 +65,7 @@ export default function Page() {
                 onGenre(value) {
                     genreInput.value = value;
                 },
-            })
+            }),
         );
     };
 
@@ -90,7 +90,7 @@ export default function Page() {
                 "maxBPM",
                 "comment",
                 "licenseType",
-                "licenseText"
+                "licenseText",
             ),
             year: parsedData.time.getFullYear(),
             month: parsedData.time.getMonth() + 1,
@@ -99,18 +99,18 @@ export default function Page() {
 
         await guard(
             setIsPending,
-            uploadMultiparted(file, details, (sentBytes) => {
+            uploadMultiparted(file, details, sentBytes => {
                 setResult({ state: "Pending", sentBytes, totalBytes: file.size });
                 console.log("sentBytes", sentBytes, file.size);
             }).then(
-                (id) => {
+                id => {
                     setResult({ state: "Success", id });
                 },
-                (e) => {
+                e => {
                     console.error(e);
                     setResult({ state: "Failed" });
-                }
-            )
+                },
+            ),
         );
     };
 
@@ -177,7 +177,7 @@ export default function Page() {
                             type="file"
                             accept="audio/*"
                             required
-                            onChange={(e) => {
+                            onChange={e => {
                                 file.current = e.currentTarget.files?.item(0) ?? null;
                             }}
                         />
@@ -191,7 +191,7 @@ export default function Page() {
                             <select
                                 id="licenseType"
                                 name="licenseType"
-                                onChange={(e) => setCurrentLicenseSelection(Number(e.currentTarget.value))}
+                                onChange={e => setCurrentLicenseSelection(Number(e.currentTarget.value))}
                             >
                                 <option value={License.PublicDomain}>CC0</option>
                                 <option value={License.CreativeCommons4.BY}>CC-BY</option>

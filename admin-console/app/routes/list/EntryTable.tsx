@@ -25,7 +25,7 @@ export default function EntryTable({
     readonly onEditClicked: (current: EntryTableRow) => MouseEventHandler<HTMLButtonElement>;
 }) {
     const f = useFetcher();
-    const items = f.formData ? initItems.filter((x) => x.id !== Number(f.formData?.get("deleteAction"))) : initItems;
+    const items = f.formData ? initItems.filter(x => x.id !== Number(f.formData?.get("deleteAction"))) : initItems;
 
     const onSubmit = (e: FormEvent<HTMLFormElement>) => {
         const deleteAction = Number(e.currentTarget["deleteAction"].value);
@@ -50,7 +50,7 @@ export default function EntryTable({
                 </tr>
             </thead>
             <tbody>
-                {items.map((x) => (
+                {items.map(x => (
                     <tr key={x.id}>
                         <td className="num">{x.id}</td>
                         <td>{x.title}</td>

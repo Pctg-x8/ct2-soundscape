@@ -8,7 +8,7 @@
         "build": "react-router build",
         "deploy": "npm run build && wrangler deploy",
         "pages-dev": "wrangler pages dev --local --persist-to=../.wrangler/state",
-        "typegen": "wrangler types"
+        "typegen": "wrangler types && react-router typegen"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3",

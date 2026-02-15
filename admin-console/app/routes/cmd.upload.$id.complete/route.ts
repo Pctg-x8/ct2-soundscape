@@ -19,7 +19,7 @@ const AddedContentDetailsSchema = z.object({
     licenseText: z
         .string()
         .optional()
-        .transform((x) => x ?? ""),
+        .transform(x => x ?? ""),
 });
 export type CompleteBodyData = Readonly<z.infer<typeof AddedContentDetailsSchema>>;
 
@@ -40,7 +40,7 @@ export async function action({ params, context, request }: Route.ActionArgs) {
             bpmRange: { min: details.minBPM, max: details.maxBPM },
             dateJst: new Date(details.year, details.month, details.day),
             license,
-        }
+        },
     );
     r.neutralize();
 

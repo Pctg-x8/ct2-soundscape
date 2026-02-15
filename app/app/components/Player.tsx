@@ -24,36 +24,36 @@ export default function Player({ source, title }: { readonly source?: string; re
 
         nativePlayerRef.current?.addEventListener(
             "volumechange",
-            (e) => {
+            e => {
                 LocalStorage.Volume.set((e.currentTarget as HTMLAudioElement).volume);
                 setVolume((e.currentTarget as HTMLAudioElement).volume);
             },
-            { signal: subscriptionCanceller.signal }
+            { signal: subscriptionCanceller.signal },
         );
 
         nativePlayerRef.current?.addEventListener(
             "timeupdate",
-            (e) => {
+            e => {
                 setCurrentTime((e.currentTarget as HTMLAudioElement).currentTime);
             },
-            { signal: subscriptionCanceller.signal }
+            { signal: subscriptionCanceller.signal },
         );
         nativePlayerRef.current?.addEventListener(
             "durationchange",
-            (e) => setTotalLength((e.currentTarget as HTMLAudioElement).duration),
-            { signal: subscriptionCanceller.signal }
+            e => setTotalLength((e.currentTarget as HTMLAudioElement).duration),
+            { signal: subscriptionCanceller.signal },
         );
         nativePlayerRef.current?.addEventListener(
             "progress",
-            (e) => {
+            e => {
                 const t = e.currentTarget as HTMLAudioElement;
                 const ranges = Array.from({ length: t.buffered.length }).map(
-                    (_, x) => [t.buffered.start(x), t.buffered.end(x)] as const
+                    (_, x) => [t.buffered.start(x), t.buffered.end(x)] as const,
                 );
 
                 setLoadedRanges(ranges);
             },
-            { signal: subscriptionCanceller.signal }
+            { signal: subscriptionCanceller.signal },
         );
 
         if (nativePlayerRef.current) {
@@ -71,7 +71,9 @@ export default function Player({ source, title }: { readonly source?: string; re
     useEffect(() => {
         if (state.state === "loading") {
             setPlayQueued(
-                state.location?.state && "autoplay" in state.location.state && state.location.state["autoplay"] === true
+                state.location?.state &&
+                    "autoplay" in state.location.state &&
+                    state.location.state["autoplay"] === true,
             );
         }
     }, [state.location, state.state]);
@@ -125,6 +127,8 @@ export default function Player({ source, title }: { readonly source?: string; re
         p.volume = Number(e.currentTarget.value);
     };
 
+    const playingPercent = (100.0 * currentTime) / totalLength;
+
     return (
         <section id="Player">
             <h1 id="PlayerPlayingArea">{title}</h1>
@@ -141,10 +145,10 @@ export default function Player({ source, title }: { readonly source?: string; re
                             }}
                         />
                     ))}
-                    <div id="PlayerSeekBarPlayed" style={{ width: `${(100 * currentTime) / totalLength}%` }} />
+                    <div id="PlayerSeekBarPlayed" style={{ width: `${playingPercent}%` }} />
                 </section>
                 <p>
-                    {toTimecode(currentTime)}/{toTimecode(totalLength)}
+                    {formatTimecode(currentTime)}/{formatTimecode(totalLength)}
                 </p>
             </section>
             <section id="PlayerControls">
@@ -171,8 +175,11 @@ export default function Player({ source, title }: { readonly source?: string; re
     );
 }
 
-function toTimecode(sec: number): string {
-    return `${Math.trunc(sec / 60).toFixed(0)}:${Math.trunc(sec % 60)
+function formatTimecode(sec: number): string {
+    const minText = Math.trunc(sec / 60).toFixed(0);
+    const secText = Math.trunc(sec % 60)
         .toFixed(0)
-        .padStart(2, "0")}`;
+        .padStart(2, "0");
+
+    return `${minText}:${secText}`;
 }

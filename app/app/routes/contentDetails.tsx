@@ -1,26 +1,35 @@
-import { data } from "react-router";
 import { ContentId } from "soundscape-shared/src/content/id";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
 import { createRepositoryAccess } from "src/repository";
+import * as z from "zod";
 import type { Details } from "~/components/DetailsPane";
-import { type Route } from "./+types/content.$id.details";
+import { notFound } from "~/genericResponse";
+import { type Route } from "./+types/contentDetails";
 
 const cacheLength = 60 * 60 * 24 * 30;
 
-export async function loader({ context, params }: Route.LoaderArgs) {
-    const result = await createRepositoryAccess(context.env, context.ctx).get(
-        new ContentId.External(Number(params["id"]))
-    );
-    if (!result) throw new Response("not found", { status: 404 });
+const ParamsSchema = z.object({ id: ContentId.External.ZodSchema });
 
-    return data(
+export async function loader({ context, params }: Route.LoaderArgs) {
+    const paramsTyped = ParamsSchema.safeParse(params);
+    if (!paramsTyped.success) {
+        console.error("invalid params", paramsTyped.error);
+        throw notFound();
+    }
+
+    const result = await createRepositoryAccess(context.env, context.ctx).get(paramsTyped.data.id);
+    if (!result) {
+        throw notFound();
+    }
+
+    return Response.json(
         {
-            id: Number(params["id"]),
+            id: paramsTyped.data.id.value,
             ...pick(result, "title", "artist", "genre", "bpmRange", "comment", "license"),
             year: result.dateJst.getFullYear(),
             month: result.dateJst.getMonth() + 1,
             day: result.dateJst.getDate(),
         } satisfies Details,
-        { headers: { "Cache-Control": `public, max-age=${cacheLength}, s-maxage=${cacheLength}` } }
+        { headers: { "Cache-Control": `public, max-age=${cacheLength}, s-maxage=${cacheLength}` } },
     );
 }

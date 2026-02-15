@@ -1,3 +1,4 @@
+import * as z from "zod";
 import { skip32 } from "../skip32";
 
 export interface ContentIdObfuscator {
@@ -17,23 +18,35 @@ export class Skip32ContentIdObfuscator implements ContentIdObfuscator {
     }
 }
 
+/**
+ * Value for dentifying a content.
+ */
 export namespace ContentId {
     export interface Untyped {
-        get value(): number;
         toInternal(ctx: ContentIdObfuscator): Internal;
         toExternal(ctx: ContentIdObfuscator): External;
     }
+
+    /**
+     * Internal formatted(for accessing DB) ID
+     */
     export class Internal implements Untyped {
-        constructor(readonly value: number) {}
+        constructor(readonly internalValue: number) {}
 
         toInternal(_ctx: ContentIdObfuscator): Internal {
             return this;
         }
         toExternal(ctx: ContentIdObfuscator): External {
-            return new External(ctx.obfuscate(this.value));
+            return new External(ctx.obfuscate(this.internalValue));
         }
     }
+
+    /**
+     * External formatted(for user-visible) ID
+     */
     export class External implements Untyped {
+        static readonly ZodSchema = z.int().transform(x => new External(x));
+
         constructor(readonly value: number) {}
 
         toInternal(ctx: ContentIdObfuscator): Internal {

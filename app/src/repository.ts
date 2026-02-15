@@ -15,7 +15,7 @@ export function createRepositoryAccess(env: Env, ec: ExecutionContext): ContentR
         idObfuscator,
         env.INFO_STORE,
         env.OBJECT_STORE,
-        createContentStreamingUrlProvider(env, ec)
+        createContentStreamingUrlProvider(env, ec),
     );
 }
 

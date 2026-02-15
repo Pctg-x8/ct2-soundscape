@@ -21,22 +21,22 @@ const FormDataSchema = zfd.formData({
     genre: zfd.text(),
     minBPM: zfd.numeric(),
     maxBPM: zfd.numeric(),
-    comment: zfd.text(z.string().optional()).transform((x) => x ?? ""),
-    time: zfd.text().transform((x) => new Date(x)),
+    comment: zfd.text(z.string().optional()).transform(x => x ?? ""),
+    time: zfd.text().transform(x => new Date(x)),
     licenseType: zfd.numeric(),
-    licenseText: zfd.text(z.string().optional()).transform((x) => x ?? ""),
+    licenseText: zfd.text(z.string().optional()).transform(x => x ?? ""),
 });
 
 async function recursiveQueryAllFiles(dir: FileSystemDirectoryEntry): Promise<File[]> {
     const entries = await new Promise<FileSystemEntry[]>((resolve, reject) =>
-        dir.createReader().readEntries(resolve, reject)
+        dir.createReader().readEntries(resolve, reject),
     );
 
     return await Promise.all(
-        entries.map((e) => {
+        entries.map(e => {
             if (e.isFile) {
                 return new Promise<File>((resolve, reject) => (e as FileSystemFileEntry).file(resolve, reject)).then(
-                    (x) => [x]
+                    x => [x],
                 );
             }
             if (e.isDirectory) {
@@ -44,8 +44,8 @@ async function recursiveQueryAllFiles(dir: FileSystemDirectoryEntry): Promise<Fi
             }
 
             return Promise.resolve([]);
-        })
-    ).then((xs) => xs.flat());
+        }),
+    ).then(xs => xs.flat());
 }
 
 export default function Page() {
@@ -63,32 +63,32 @@ export default function Page() {
 
         if (e.dataTransfer.files === null) return;
         const files = await Promise.all(
-            Array.from(e.dataTransfer.items).map((x) => {
+            Array.from(e.dataTransfer.items).map(x => {
                 const e = x.webkitGetAsEntry();
                 if (!e) return Promise.resolve([]);
 
                 if (e.isDirectory) return recursiveQueryAllFiles(e as FileSystemDirectoryEntry);
                 if (e.isFile) {
                     return new Promise<File>((resolve, reject) =>
-                        (e as FileSystemFileEntry).file(resolve, reject)
-                    ).then((x) => [x]);
+                        (e as FileSystemFileEntry).file(resolve, reject),
+                    ).then(x => [x]);
                 }
 
                 return Promise.resolve([]);
-            })
-        ).then((xs) => xs.flat().filter((x) => x.type.startsWith("audio/")));
+            }),
+        ).then(xs => xs.flat().filter(x => x.type.startsWith("audio/")));
 
-        setInitFiles((fs) => [...fs, ...files.map((f, o) => [entryIdCounter.current + o, f] as const)]);
+        setInitFiles(fs => [...fs, ...files.map((f, o) => [entryIdCounter.current + o, f] as const)]);
         entryIdCounter.current += files.length;
     };
 
     const onAddClicked = () => {
-        setInitFiles((fs) => [...fs, [entryIdCounter.current, null] as const]);
+        setInitFiles(fs => [...fs, [entryIdCounter.current, null] as const]);
         entryIdCounter.current += 1;
     };
 
     const onCancel = (key: number) => () => {
-        setInitFiles((fs) => fs.filter(([k, _]) => k !== key));
+        setInitFiles(fs => fs.filter(([k, _]) => k !== key));
     };
 
     const registerSubmission = useCallback((identifier: number, submit: () => void) => {
@@ -190,7 +190,7 @@ function Entry({
                 onGenre(value) {
                     genreInput.value = value;
                 },
-            })
+            }),
         );
     };
 
@@ -239,7 +239,7 @@ function Entry({
                 "maxBPM",
                 "comment",
                 "licenseType",
-                "licenseText"
+                "licenseText",
             ),
             year: parsedData.time.getFullYear(),
             month: parsedData.time.getMonth() + 1,
@@ -248,18 +248,18 @@ function Entry({
 
         await guard(
             setIsPending,
-            uploadMultiparted(file, details, (sentBytes) => {
+            uploadMultiparted(file, details, sentBytes => {
                 setResult({ state: "Pending", sentBytes, totalBytes: file.size });
                 console.log("sentBytes", sentBytes, file.size);
             }).then(
-                (id) => {
+                id => {
                     setResult({ state: "Success", id });
                 },
-                (e) => {
+                e => {
                     console.error(e);
                     setResult({ state: "Failed" });
-                }
-            )
+                },
+            ),
         );
     };
 
@@ -313,14 +313,14 @@ function Entry({
                     <fieldset disabled={isPending || result?.state === "Success"}>
                         <section>
                             <label htmlFor="title">タイトル</label>
-                            <input id="title" name="title" onChange={(e) => setTitle(e.currentTarget.value)} required />
+                            <input id="title" name="title" onChange={e => setTitle(e.currentTarget.value)} required />
                         </section>
                         <section>
                             <label htmlFor="artist">アーティスト表記名</label>
                             <input
                                 id="artist"
                                 name="artist"
-                                onChange={(e) => setArtist(e.currentTarget.value)}
+                                onChange={e => setArtist(e.currentTarget.value)}
                                 required
                             />
                         </section>
@@ -366,7 +366,7 @@ function Entry({
                                 type="file"
                                 accept="audio/*"
                                 required
-                                onChange={(e) => {
+                                onChange={e => {
                                     file.current = e.currentTarget.files?.item(0) ?? null;
                                 }}
                             />
@@ -380,7 +380,7 @@ function Entry({
                                 <select
                                     id="licenseType"
                                     name="licenseType"
-                                    onChange={(e) => setCurrentLicenseSelection(Number(e.currentTarget.value))}
+                                    onChange={e => setCurrentLicenseSelection(Number(e.currentTarget.value))}
                                 >
                                     <option value={License.PublicDomain}>CC0</option>
                                     <option value={License.CreativeCommons4.BY}>CC-BY</option>

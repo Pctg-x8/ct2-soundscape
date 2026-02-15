@@ -3,7 +3,7 @@ export class ReversibleOperation<T = void> implements AsyncDisposable {
 
     constructor(
         readonly value: T,
-        rollback: () => Promise<void>
+        rollback: () => Promise<void>,
     ) {
         this.rollback = rollback;
     }

@@ -1,15 +1,15 @@
 // content model
 
-import { License } from "./valueObjects/license";
-import * as schema from "./schema";
-import { drizzle } from "drizzle-orm/d1";
 import { count, eq, sql } from "drizzle-orm";
-import { unwrapNullishOr } from "./utils/nullish";
-import { _let } from "./utils";
-import { pick } from "./utils/typeImpl";
+import { drizzle } from "drizzle-orm/d1";
 import { ContentId, ContentIdObfuscator } from "./content/id";
 import { ContentStreamingUrlProvider } from "./content/streamUrlProvider";
+import * as schema from "./schema";
+import { _let } from "./utils";
+import { unwrapNullishOr } from "./utils/nullish";
 import { ReversibleOperation } from "./utils/ReversibleOperation";
+import { pick } from "./utils/typeImpl";
+import { License } from "./valueObjects/license";
 import { PendingUploadState } from "./valueObjects/pendingUploadState";
 
 export type NumRange = { readonly min: number; readonly max: number };
@@ -57,7 +57,7 @@ export interface ContentAdminRepository extends ContentRepository {
         id: ContentId.Untyped,
         details: Partial<ContentDetails>,
         contentType: string,
-        contentStream: ReadableStream
+        contentStream: ReadableStream,
     ): Promise<void>;
 
     delete(id: ContentId.Untyped): Promise<void>;
@@ -69,7 +69,7 @@ export interface ContentAdminMultipartRepository extends ContentAdminRepository 
     abortMultipartUploading(contentId: ContentId.Untyped): Promise<ReversibleOperation>;
     completeMultipartUploading(
         contentId: ContentId.Untyped,
-        details: AddedContentDetails
+        details: AddedContentDetails,
     ): Promise<ReversibleOperation>;
 }
 
@@ -78,7 +78,7 @@ export class CloudflareContentRepository implements ContentRepository {
         protected readonly idObfuscator: ContentIdObfuscator,
         protected readonly infoStore: D1Database,
         protected readonly objectStore: R2Bucket,
-        protected readonly streamingUrlProvider: ContentStreamingUrlProvider
+        protected readonly streamingUrlProvider: ContentStreamingUrlProvider,
     ) {}
 
     protected connectInfoStore() {
@@ -99,11 +99,11 @@ export class CloudflareContentRepository implements ContentRepository {
     get allDetails(): Promise<IdentifiedContentDetails[]> {
         return this.connectInfoStore()
             .query.details.findMany()
-            .then((xs) =>
-                xs.map((r) => ({
+            .then(xs =>
+                xs.map(r => ({
                     ...this.detailsFromDBRow(r),
                     id: new ContentId.Internal(r.id).toExternal(this.idObfuscator),
-                }))
+                })),
             );
     }
 
@@ -112,7 +112,7 @@ export class CloudflareContentRepository implements ContentRepository {
             .select({ year: schema.details.year, count: count() })
             .from(schema.details)
             .groupBy(schema.details.year)
-            .then((xs) => xs.map((r) => [r.year, r.count]));
+            .then(xs => xs.map(r => [r.year, r.count]));
     }
 
     getDetailsByYear(year: number): Promise<IdentifiedContentDetails[]> {
@@ -120,20 +120,20 @@ export class CloudflareContentRepository implements ContentRepository {
             .query.details.findMany({
                 where: eq(schema.details.year, year),
             })
-            .then((xs) =>
-                xs.map((r) => ({
+            .then(xs =>
+                xs.map(r => ({
                     ...this.detailsFromDBRow(r),
                     id: new ContentId.Internal(r.id).toExternal(this.idObfuscator),
-                }))
+                })),
             );
     }
 
     get(id: ContentId.Untyped): Promise<ContentDetails | undefined> {
         return this.connectInfoStore()
             .query.details.findFirst({
-                where: eq(schema.details.id, id.toInternal(this.idObfuscator).value),
+                where: eq(schema.details.id, id.toInternal(this.idObfuscator).internalValue),
             })
-            .then((x) => (x === undefined ? undefined : this.detailsFromDBRow(x)));
+            .then(x => (x === undefined ? undefined : this.detailsFromDBRow(x)));
     }
 
     getContentUrl(id: ContentId.Untyped): Promise<string | undefined> {
@@ -147,10 +147,10 @@ export class CloudflareContentRepository implements ContentRepository {
             this.connectInfoStore()
                 .update(schema.details)
                 .set({ downloadCount: sql`${schema.details.downloadCount} + 1` })
-                .where(eq(schema.details.id, internalId.value))
+                .where(eq(schema.details.id, internalId.internalValue))
                 .returning({ title: schema.details.title, artist: schema.details.artist })
-                .then((xs) => xs[0]),
-            this.objectStore.get(internalId.value.toString()),
+                .then(xs => xs[0]),
+            this.objectStore.get(internalId.internalValue.toString()),
         ]);
         if (!infoRow || !obj) return undefined;
 
@@ -170,7 +170,7 @@ export class CloudflareContentAdminRepository
     async add(
         details: AddedContentDetails,
         contentType: string,
-        content: File | ReadableStream
+        content: File | ReadableStream,
     ): Promise<ContentId.External> {
         const db = this.connectInfoStore();
         const [licenseType, licenseText] = License.toDBValues(details.license);
@@ -196,17 +196,17 @@ export class CloudflareContentAdminRepository
         id: ContentId.Untyped,
         details: Partial<ContentDetails>,
         contentType?: string,
-        content?: File | ReadableStream
+        content?: File | ReadableStream,
     ): Promise<void> {
         const db = this.connectInfoStore();
-        const internalId = id.toInternal(this.idObfuscator).value;
+        const internalId = id.toInternal(this.idObfuscator).internalValue;
 
         const [oldContent] = await db
             .update(schema.details)
             .set({
                 ...pick(details, "title", "artist", "genre", "comment", "downloadCount"),
                 year: details.dateJst?.getFullYear(),
-                month: _let(details.dateJst?.getMonth(), (x) => (x === undefined ? undefined : x + 1)),
+                month: _let(details.dateJst?.getMonth(), x => (x === undefined ? undefined : x + 1)),
                 day: details.dateJst?.getDate(),
                 minBPM: details.bpmRange?.min,
                 maxBPM: details.bpmRange?.max,
@@ -234,7 +234,7 @@ export class CloudflareContentAdminRepository
 
         const [recovered] = await db
             .delete(schema.details)
-            .where(eq(schema.details.id, id.toInternal(this.idObfuscator).value))
+            .where(eq(schema.details.id, id.toInternal(this.idObfuscator).internalValue))
             .returning();
 
         try {
@@ -282,13 +282,13 @@ export class CloudflareContentAdminRepository
     }
 
     async uploadPart(contentId: ContentId.Untyped, partNumber: number, data: ArrayBuffer): Promise<void> {
-        const internalId = contentId.toInternal(this.idObfuscator).value;
+        const internalId = contentId.toInternal(this.idObfuscator).internalValue;
         const db = this.connectInfoStore();
         const r = await db.query.pendingUploads.findFirst({
             where: eq(schema.pendingUploads.contentId, internalId),
         });
         if (!r) {
-            throw new Error(`#${contentId.value} has no started multipart uploading`);
+            throw new Error(`#${internalId} has no started multipart uploading`);
         }
 
         const part = await this.objectStore
@@ -299,7 +299,7 @@ export class CloudflareContentAdminRepository
     }
 
     async abortMultipartUploading(contentId: ContentId.Untyped): Promise<ReversibleOperation> {
-        const internalId = contentId.toInternal(this.idObfuscator).value;
+        const internalId = contentId.toInternal(this.idObfuscator).internalValue;
         const markAborted = async () => {
             const [r] = await this.connectInfoStore()
                 .update(schema.pendingUploads)
@@ -328,9 +328,9 @@ export class CloudflareContentAdminRepository
 
     async completeMultipartUploading(
         contentId: ContentId.Untyped,
-        details: AddedContentDetails
+        details: AddedContentDetails,
     ): Promise<ReversibleOperation> {
-        const internalId = contentId.toInternal(this.idObfuscator).value;
+        const internalId = contentId.toInternal(this.idObfuscator).internalValue;
         const db = this.connectInfoStore();
         const markCompleted = async () => {
             const [r] = await db
@@ -373,7 +373,7 @@ export class CloudflareContentAdminRepository
             return r.combineDrop(
                 new ReversibleOperation(undefined, async () => {
                     await this.connectInfoStore().delete(schema.details).where(eq(schema.details.id, internalId));
-                })
+                }),
             );
         } finally {
             await r[Symbol.asyncDispose]();

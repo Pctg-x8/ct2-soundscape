@@ -24,9 +24,9 @@ import * as zfd from "zod-form-data";
 export async function loader({ context }: Route.LoaderArgs) {
     const items: Promise<EntryTableRow[]> = createRepositoryAccess(
         context.env,
-        context.executionContext
-    ).allDetails.then((xs) =>
-        xs.map((x) => ({
+        context.executionContext,
+    ).allDetails.then(xs =>
+        xs.map(x => ({
             id: x.id.value,
             title: x.title,
             artist: x.artist,
@@ -39,7 +39,7 @@ export async function loader({ context }: Route.LoaderArgs) {
             comment: x.comment,
             dlCount: x.downloadCount,
             license: x.license,
-        }))
+        })),
     );
 
     return { items };
@@ -58,22 +58,22 @@ export async function action({ request, context }: ActionFunctionArgs) {
               console.dir(upload);
           });
 
-    const inputSchema = zfd.formData({ deleteAction: zfd.numeric().transform((x) => new ContentId.External(x)) }).or(
+    const inputSchema = zfd.formData({ deleteAction: zfd.numeric().transform(x => new ContentId.External(x)) }).or(
         zfd.formData({
             fromEditDialog: zfd
                 .text()
-                .transform((x) => (x === "false" ? false : new ContentId.External(Number.parseInt(x)))),
+                .transform(x => (x === "false" ? false : new ContentId.External(Number.parseInt(x)))),
             title: zfd.text(),
             artist: zfd.text(),
             genre: zfd.text(),
             minBPM: zfd.numeric(),
             maxBPM: zfd.numeric(),
-            comment: zfd.text(z.string().optional()).transform((x) => x ?? ""),
-            time: zfd.text().transform((x) => new Date(x)),
+            comment: zfd.text(z.string().optional()).transform(x => x ?? ""),
+            time: zfd.text().transform(x => new Date(x)),
             licenseType: zfd.numeric(),
-            licenseText: zfd.text(z.string().optional()).transform((x) => x ?? ""),
+            licenseText: zfd.text(z.string().optional()).transform(x => x ?? ""),
             file: zfd.file(z.instanceof(File).optional()),
-        })
+        }),
     );
     const input = inputSchema.parse(values);
 
@@ -166,7 +166,7 @@ export default function Page() {
             setEditing(currentValue);
             editDialogRef.current?.showModal();
         },
-        []
+        [],
     );
 
     return (
@@ -175,9 +175,7 @@ export default function Page() {
             <title>Content List - Soundscape (Admin Console)</title>
             <h1>登録済み一覧</h1>
             <Suspense fallback={<p>Loading...</p>}>
-                <Await resolve={items}>
-                    {(items) => <EntryTable initItems={items} onEditClicked={onEditClicked} />}
-                </Await>
+                <Await resolve={items}>{items => <EntryTable initItems={items} onEditClicked={onEditClicked} />}</Await>
             </Suspense>
             <EditDialog ref={editDialogRef} editing={editing} fetcher={fs} />
         </article>
@@ -270,7 +268,7 @@ function EditForm({
                             id="licenseType"
                             name="licenseType"
                             defaultValue={currentLicenseSelection}
-                            onChange={(e) => setCurrentLicenseSelection(Number(e.currentTarget.value))}
+                            onChange={e => setCurrentLicenseSelection(Number(e.currentTarget.value))}
                         >
                             <option value={License.PublicDomain}>CC0</option>
                             <option value={License.CreativeCommons4.BY}>CC-BY</option>
@@ -303,7 +301,7 @@ function EditForm({
 
 const EditDialog = forwardRef(function EditDialog(
     { editing, fetcher }: { readonly editing: EntryTableRow; readonly fetcher: FetcherWithComponents<unknown> },
-    ref: ForwardedRef<HTMLDialogElement>
+    ref: ForwardedRef<HTMLDialogElement>,
 ) {
     return (
         <dialog ref={ref}>

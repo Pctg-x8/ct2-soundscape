@@ -3,7 +3,7 @@ export namespace LocalStorage {
         constructor(
             private readonly key: string,
             private readonly toStorage: (value: T) => string,
-            private readonly fromStorage: (value: string) => T
+            private readonly fromStorage: (value: string) => T,
         ) {}
 
         get(): T | null {

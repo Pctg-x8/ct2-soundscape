@@ -15,8 +15,9 @@
         "noEmit": true,
         "paths": {
             "~/*": ["./app/*"],
+            "@licenseDocuments": ["./licenseDocuments"]
         },
         "types": ["@react-router/cloudflare", "@cloudflare/workers-types"],
-        "rootDirs": [".", "./.react-router/types"],
+        "rootDirs": [".", "./.react-router/types"]
     },
 }

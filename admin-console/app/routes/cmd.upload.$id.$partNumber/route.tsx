@@ -15,7 +15,7 @@ export async function action({ params, request, context }: Route.ActionArgs) {
     await createRepositoryAccess(context.env, context.executionContext).uploadPart(
         new ContentId.External(id),
         partNumber,
-        await request.arrayBuffer()
+        await request.arrayBuffer(),
     );
     return "";
 }

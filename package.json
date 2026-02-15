@@ -28,6 +28,7 @@
     "workspaces": [
         "app",
         "admin-console",
-        "shared"
+        "shared",
+        "prettier-config-shared"
     ]
 }

@@ -43,7 +43,7 @@ export class ID3v2Section {
         readonly patchVersion: number,
         readonly flags: number,
         readonly size: number,
-        readonly content: DataView
+        readonly content: DataView,
     ) {}
 
     get useSyncSafeInteger(): boolean {
@@ -59,7 +59,7 @@ export class ID3v2Section {
             idNumber & 0xff,
             (idNumber >> 8) & 0xff,
             (idNumber >> 16) & 0xff,
-            (idNumber >> 24) & 0xff
+            (idNumber >> 24) & 0xff,
         );
         const size = this.useSyncSafeInteger
             ? readSyncSafeInteger(this.content, at + 4)

@@ -12,7 +12,7 @@ export async function action({ context, request }: Route.ActionArgs) {
 
     // TODO: 本来はawait usingを使いたい remixがなんか対応してないらしい？？
     const upload = await createRepositoryAccess(context.env, context.executionContext).beginMultipartUploading(
-        contentType
+        contentType,
     );
     upload.neutralize();
 

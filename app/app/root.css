@@ -297,7 +297,7 @@ body {
     font-size: 12pt;
     padding: 0.8rem;
 
-    &.show {
+    &[data-show="true"] {
         transform: translateX(0%);
         opacity: 1;
     }

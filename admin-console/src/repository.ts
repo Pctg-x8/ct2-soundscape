@@ -1,3 +1,4 @@
+import { AwsClient } from "aws4fetch";
 import { CloudflareContentAdminRepository, type ContentAdminMultipartRepository } from "soundscape-shared/src/content";
 import { Skip32ContentIdObfuscator } from "soundscape-shared/src/content/id";
 import {
@@ -6,7 +7,6 @@ import {
     SignedContentStreamingUrlProvider,
 } from "soundscape-shared/src/content/streamUrlProvider";
 import { parseHexStringBytes } from "soundscape-shared/src/utils/hexstring";
-import { AwsClient } from "aws4fetch";
 
 export function createRepositoryAccess(env: Env, ec: ExecutionContext): ContentAdminMultipartRepository {
     const idObfuscator = new Skip32ContentIdObfuscator(parseHexStringBytes(env.CONTENT_ID_OBFUSCATOR_KEY));
@@ -15,7 +15,7 @@ export function createRepositoryAccess(env: Env, ec: ExecutionContext): ContentA
         idObfuscator,
         env.INFO_STORE,
         env.OBJECT_STORE,
-        createContentStreamingUrlProvider(env, ec)
+        createContentStreamingUrlProvider(env, ec),
     );
 }
 

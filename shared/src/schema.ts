@@ -17,9 +17,7 @@ export const details = sqliteTable(
         licenseType: integer("license_type").notNull().default(0),
         licenseText: text("license_text"),
     },
-    (table) => ({
-        yearIndex: index("year_index").on(table.year),
-    })
+    table => [index("year_index").on(table.year)],
 );
 export type Details = Readonly<typeof details.$inferSelect>;
 export type DetailsInsert = Readonly<typeof details.$inferInsert>;
@@ -38,7 +36,5 @@ export const uploadedParts = sqliteTable(
         partNumber: integer("part_number").notNull(),
         etag: text("etag").notNull(),
     },
-    (table) => ({
-        contentIdIndex: index("content_id_index").on(table.contentId),
-    })
+    table => [index("content_id_index").on(table.contentId)],
 );

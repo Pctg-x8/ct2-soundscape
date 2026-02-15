@@ -1,13 +1,13 @@
-import { ServerRouter, type AppLoadContext, type EntryContext } from "react-router";
 import { isbot } from "isbot";
 import ReactDOMServer from "react-dom/server";
+import { ServerRouter, type AppLoadContext, type EntryContext } from "react-router";
 
 export default async function handleRequest(
     request: Request,
     responseStatusCode: number,
     responseHeaders: Headers,
     remixContext: EntryContext,
-    loadContext: AppLoadContext
+    loadContext: AppLoadContext,
 ) {
     const body = await ReactDOMServer.renderToReadableStream(
         <ServerRouter context={remixContext} url={request.url} />,
@@ -18,7 +18,7 @@ export default async function handleRequest(
                 console.error(error);
                 responseStatusCode = 500;
             },
-        }
+        },
     );
 
     if (isbot(request.headers.get("user-agent"))) {

@@ -68,7 +68,7 @@ export abstract class RIFFChunk {
 export class UnknownRIFFChunk extends RIFFChunk {
     constructor(
         readonly id: string,
-        readonly contentView: DataView
+        readonly contentView: DataView,
     ) {
         super();
     }
@@ -112,7 +112,7 @@ export class RIFFInfoList {
         const byteLength = this.contentView.getUint32(offset + 4, true);
         const valueBytes = Array.from({ length: byteLength })
             .map((_, o) => this.contentView.getUint8(offset + 8 + o))
-            .filter((x) => x != 0);
+            .filter(x => x != 0);
         const value = new TextDecoder("shift-jis").decode(new Uint8Array(valueBytes));
 
         return [unFourccLE(this.contentView.getUint32(offset + 0, true)), value, byteLength + 8];

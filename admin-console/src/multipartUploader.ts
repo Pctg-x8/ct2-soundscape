@@ -29,7 +29,7 @@ class PendingUpload {
 export async function uploadMultiparted(
     content: Blob,
     details: CompleteBodyData,
-    progress: (sentBytes: number) => void
+    progress: (sentBytes: number) => void,
 ): Promise<number> {
     const PART_SIZE = 8 * 1024 * 1024;
 
