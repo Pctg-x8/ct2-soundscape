@@ -9,6 +9,7 @@ import System.FilePath ((</>))
 import Workflow.GitHub.Actions qualified as GHA
 import Workflow.GitHub.Actions.Predefined.Checkout qualified as Checkout
 import Workflow.GitHub.Actions.Predefined.Rust.Toolchain qualified as Rust
+import Workflow.GitHub.Actions.Predefined.SetupNode qualified as SetupNode
 import Workflow.GitHub.Actions.Predefined.SetupPNPM qualified as SetupPNPM
 
 secretCloudflareApiToken :: String
@@ -56,11 +57,9 @@ adminConsoleDeploymentJob =
     GHA.namedAs "Deployment(Admin Console)" $
       GHA.job
         [ GHA.namedAs "Checking out" $ Checkout.step Nothing,
-          GHA.namedAs "Setup PNPM" $
-            SetupPNPM.step
-              [ SetupPNPM.runInstallOption & filterProject "shared" & filterProject adminConsoleProjectName & useFrozenLockfile
-              ],
-          GHA.namedAs "deploy" $ GHA.runStep "pnpm run deploy" & withDeploymentEnvironments & GHA.workAt "admin-console"
+          GHA.namedAs "Setup Node" $ SetupNode.step (SetupNode.Version "25"),
+          GHA.namedAs "Install deps" $ GHA.runStep "npm ci -w admin-console -w shared",
+          GHA.namedAs "deploy" $ GHA.runStep "npm run deploy -w admin-console" & withDeploymentEnvironments
         ]
 
 appDeploymentJob :: GHA.Job
@@ -69,11 +68,9 @@ appDeploymentJob =
     GHA.namedAs "Deployment(App)" $
       GHA.job
         [ GHA.namedAs "Checking out" $ Checkout.step Nothing,
-          GHA.namedAs "Setup PNPM" $
-            SetupPNPM.step
-              [ SetupPNPM.runInstallOption & filterProject "shared" & filterProject appProjectName & useFrozenLockfile
-              ],
-          GHA.namedAs "deploy" $ GHA.runStep "pnpm run deploy" & withDeploymentEnvironments & GHA.workAt "app"
+          GHA.namedAs "Setup Node" $ SetupNode.step (SetupNode.Version "25"),
+          GHA.namedAs "Install deps" $ GHA.runStep "npm ci -w app -w shared",
+          GHA.namedAs "deploy" $ GHA.runStep "npm run deploy -w app" & withDeploymentEnvironments
         ]
 
 targets :: [(FilePath, GHA.Workflow)]
@@ -83,8 +80,7 @@ targets =
         $ GHA.concurrentPolicy (GHA.ConcurrentCancelledGroup "master-auto-deployment")
         $ GHA.buildWorkflow
           [ GHA.workflowJob "admin-console" adminConsoleDeploymentJob,
-            GHA.workflowJob "app" appDeploymentJob,
-            GHA.workflowJob "headless-admin-console" headlessAdminConsoleDeploymentJob
+            GHA.workflowJob "app" appDeploymentJob
           ]
         $ GHA.onPush
         $ GHA.workflowPushTrigger & GHA.filterBranch "master"
@@ -93,5 +89,8 @@ targets =
 
 main :: IO ()
 main = do
-  base <- head <$> getArgs
+  base <-
+    getArgs >>= \case
+      x : _ -> pure x
+      [] -> error "base path requred"
   forM_ targets $ uncurry LBS8.writeFile . bimap (base </>) GHA.build

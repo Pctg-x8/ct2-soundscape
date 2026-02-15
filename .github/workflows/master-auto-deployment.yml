@@ -1,0 +1,45 @@
+concurrency:
+  cancel-in-progress: true
+  group: master-auto-deployment
+jobs:
+  admin-console:
+    environment: prod:admin-console
+    name: "Deployment(Admin Console)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checking out
+        uses: "actions/checkout@v4"
+      - name: Setup Node
+        uses: "actions/setup-node@v4"
+        with:
+          node-version: '25'
+      - name: Install deps
+        run: npm ci -w admin-console -w shared
+      - env:
+          CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+          CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+        name: deploy
+        run: npm run deploy -w admin-console
+  app:
+    environment: prod:app
+    name: "Deployment(App)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checking out
+        uses: "actions/checkout@v4"
+      - name: Setup Node
+        uses: "actions/setup-node@v4"
+        with:
+          node-version: '25'
+      - name: Install deps
+        run: npm ci -w app -w shared
+      - env:
+          CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+          CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+        name: deploy
+        run: npm run deploy -w app
+name: Master Deployment
+on:
+  push:
+    branches:
+      - master
