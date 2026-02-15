@@ -1,14 +1,14 @@
 import { ContentId } from "soundscape-shared/src/content/id";
+import { notFound } from "soundscape-shared/src/utils/genericResponse";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
 import { createRepositoryAccess } from "src/repository";
 import * as z from "zod";
 import type { Details } from "~/components/DetailsPane";
-import { notFound } from "~/genericResponse";
 import { type Route } from "./+types/contentDetails";
 
 const cacheLength = 60 * 60 * 24 * 30;
 
-const ParamsSchema = z.object({ id: ContentId.External.ZodSchema });
+const ParamsSchema = z.object({ id: ContentId.External.ZodPathParamSchema });
 
 export async function loader({ context, params }: Route.LoaderArgs) {
     const paramsTyped = ParamsSchema.safeParse(params);

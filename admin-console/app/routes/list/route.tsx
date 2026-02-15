@@ -8,7 +8,11 @@ import {
     useFetcher,
     useLoaderData,
 } from "react-router";
-import type { ContentDetails } from "soundscape-shared/src/content";
+import type {
+    ContentAdminMultipartRepository,
+    ContentAdminRepository,
+    ContentDetails,
+} from "soundscape-shared/src/content";
 import { ContentId } from "soundscape-shared/src/content/id";
 import { License } from "soundscape-shared/src/valueObjects/license";
 import * as z from "zod";
@@ -17,7 +21,9 @@ import EntryTable, { type EntryTableRow } from "./EntryTable";
 import "./style.css";
 
 import { FileUpload, parseFormData } from "@remix-run/form-data-parser";
+import { badRequest } from "soundscape-shared/src/utils/genericResponse";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
+import { convertLicenseInput } from "src/conversion";
 import { createRepositoryAccess } from "src/repository";
 import * as zfd from "zod-form-data";
 
@@ -28,21 +34,65 @@ export async function loader({ context }: Route.LoaderArgs) {
     ).allDetails.then(xs =>
         xs.map(x => ({
             id: x.id.value,
-            title: x.title,
-            artist: x.artist,
-            genre: x.genre,
-            bpmRange: x.bpmRange,
+            ...pick(x, "title", "artist", "genre", "bpmRange", "comment", "license"),
             year: x.dateJst.getFullYear(),
             // Note: returned as 0-based(Jan = 0)
             month: x.dateJst.getMonth() + 1,
             day: x.dateJst.getDate(),
-            comment: x.comment,
             dlCount: x.downloadCount,
-            license: x.license,
         })),
     );
 
     return { items };
+}
+
+const DeleteActionInputSchema = zfd.formData({ deleteAction: ContentId.External.ZodSchema });
+const ModifyActionInputSchema = zfd.formData({
+    fromEditDialog: zfd.text(z.enum(["cancel"])).or(ContentId.External.ZodSchema),
+    title: zfd.text(),
+    artist: zfd.text(),
+    genre: zfd.text(),
+    minBPM: zfd.numeric(),
+    maxBPM: zfd.numeric(),
+    comment: zfd.text(z.string().optional()).transform(x => x ?? ""),
+    time: zfd.text().transform(x => new Date(x)),
+    licenseType: zfd.numeric(),
+    licenseText: zfd.text(z.string().optional()).transform(x => x ?? ""),
+    file: zfd.file(z.instanceof(File).optional()),
+});
+const ActionInputSchema = DeleteActionInputSchema.or(ModifyActionInputSchema);
+
+async function performDelete(contentRepository: ContentAdminRepository, id: ContentId.External): Promise<void> {
+    await contentRepository.delete(id);
+}
+
+async function performSave(
+    contentRepository: ContentAdminMultipartRepository,
+    id: ContentId.External,
+    input: z.infer<typeof ModifyActionInputSchema>,
+): Promise<void> {
+    let license: License.Type;
+    try {
+        license = convertLicenseInput(input);
+    } catch (e) {
+        console.error("invalid license input", e);
+        throw badRequest();
+    }
+
+    const newDetails: Partial<ContentDetails> = {
+        ...pick(input, "title", "artist", "genre", "comment"),
+        bpmRange: { min: input.minBPM, max: input.maxBPM },
+        dateJst: input.time,
+        license,
+    };
+
+    if (input.file instanceof File) {
+        // with content replacement
+        await contentRepository.update(id, newDetails, input.file.type, input.file);
+    } else {
+        // preserve content
+        await contentRepository.update(id, newDetails);
+    }
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
@@ -58,77 +108,33 @@ export async function action({ request, context }: ActionFunctionArgs) {
               console.dir(upload);
           });
 
-    const inputSchema = zfd.formData({ deleteAction: zfd.numeric().transform(x => new ContentId.External(x)) }).or(
-        zfd.formData({
-            fromEditDialog: zfd
-                .text()
-                .transform(x => (x === "false" ? false : new ContentId.External(Number.parseInt(x)))),
-            title: zfd.text(),
-            artist: zfd.text(),
-            genre: zfd.text(),
-            minBPM: zfd.numeric(),
-            maxBPM: zfd.numeric(),
-            comment: zfd.text(z.string().optional()).transform(x => x ?? ""),
-            time: zfd.text().transform(x => new Date(x)),
-            licenseType: zfd.numeric(),
-            licenseText: zfd.text(z.string().optional()).transform(x => x ?? ""),
-            file: zfd.file(z.instanceof(File).optional()),
-        }),
-    );
-    const input = inputSchema.parse(values);
+    const tryInput = ActionInputSchema.safeParse(values);
+    if (!tryInput.success) {
+        console.error("invalid form data", tryInput.error, values);
+        throw badRequest();
+    }
+    const input = tryInput.data;
 
     const contentRepository = createRepositoryAccess(context.env, context.executionContext);
 
     if ("deleteAction" in input) {
-        await contentRepository.delete(input.deleteAction);
+        await performDelete(contentRepository, input.deleteAction);
         return Response.json({ action: "delete" });
     }
 
     if ("fromEditDialog" in input) {
-        if (input.fromEditDialog !== false) {
-            // save required
-
-            let license: License.Type;
-            switch (input.licenseType) {
-                case License.PublicDomain:
-                case License.CreativeCommons4.BY:
-                case License.CreativeCommons4.BY_SA:
-                case License.CreativeCommons4.BY_NC:
-                case License.CreativeCommons4.BY_ND:
-                case License.CreativeCommons4.BY_NC_SA:
-                case License.CreativeCommons4.BY_NC_ND:
-                    license = input.licenseType;
-                    break;
-                case 999:
-                    license = input.licenseText;
-                    break;
-                default:
-                    throw new Error("invalid license input");
-            }
-
-            const id = input.fromEditDialog;
-            const newDetails: Partial<ContentDetails> = {
-                ...pick(input, "title", "artist", "genre", "comment"),
-                bpmRange: { min: input.minBPM, max: input.maxBPM },
-                dateJst: input.time,
-                license,
-            };
-
-            if (input.file instanceof File) {
-                // with content replacement
-                await contentRepository.update(id, newDetails, input.file.type, input.file);
-            } else {
-                // preserve content
-                await contentRepository.update(id, newDetails);
-            }
-
-            return Response.json({ action: "update" });
+        if (input.fromEditDialog === "cancel") {
+            // cancelled action(no performs)
+            return Response.json({ action: "update-cancel" });
         }
 
-        return Response.json({ action: "update-cancel" });
+        // save required
+        await performSave(contentRepository, input.fromEditDialog, input);
+        return Response.json({ action: "update" });
     }
 
-    return new Response("unknown action", { status: 400 });
+    console.error("unknown action", input);
+    throw badRequest();
 }
 
 export function shouldRevalidate({ actionResult, defaultShouldRevalidate }: ShouldRevalidateFunctionArgs) {
@@ -182,6 +188,8 @@ export default function Page() {
     );
 }
 
+const LicenseNonConstValue = 999;
+
 function EditForm({
     defaultValues,
     fetcher,
@@ -200,7 +208,7 @@ function EditForm({
             case License.CreativeCommons4.BY_NC_SA:
                 return defaultValues.license;
             default:
-                return 999;
+                return LicenseNonConstValue;
         }
     });
 
@@ -277,12 +285,12 @@ function EditForm({
                             <option value={License.CreativeCommons4.BY_NC_SA}>CC-BY-NC-SA</option>
                             <option value={License.CreativeCommons4.BY_NC_ND}>CC-BY-NC-ND</option>
                             <option value={License.CreativeCommons4.BY_ND}>CC-BY-ND</option>
-                            <option value={999}>その他</option>
+                            <option value={LicenseNonConstValue}>その他</option>
                         </select>
                         <input
                             name="licenseText"
                             defaultValue={typeof defaultValues.license === "string" ? defaultValues.license : ""}
-                            disabled={currentLicenseSelection !== 999}
+                            disabled={currentLicenseSelection !== LicenseNonConstValue}
                         />
                     </div>
                 </section>
@@ -290,7 +298,7 @@ function EditForm({
                     <button type="submit" name="fromEditDialog" value={defaultValues.id.toString()}>
                         確定
                     </button>
-                    <button type="submit" name="fromEditDialog" value="false">
+                    <button type="submit" name="fromEditDialog" value="cancel">
                         取り消し
                     </button>
                 </section>

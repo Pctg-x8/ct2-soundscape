@@ -7,7 +7,7 @@ import { ContentStreamingUrlProvider } from "./content/streamUrlProvider";
 import * as schema from "./schema";
 import { _let } from "./utils";
 import { unwrapNullishOr } from "./utils/nullish";
-import { ReversibleOperation } from "./utils/ReversibleOperation";
+import { IReversibleOperation, ReversibleOperation } from "./utils/ReversibleOperation";
 import { pick } from "./utils/typeImpl";
 import { License } from "./valueObjects/license";
 import { PendingUploadState } from "./valueObjects/pendingUploadState";
@@ -64,13 +64,10 @@ export interface ContentAdminRepository extends ContentRepository {
 }
 
 export interface ContentAdminMultipartRepository extends ContentAdminRepository {
-    beginMultipartUploading(contentType: string): Promise<ReversibleOperation<ContentId.External>>;
+    beginMultipartUploading(contentType: string): Promise<ContentId.External>;
     uploadPart(contentId: ContentId.Untyped, partNumber: number, data: ArrayBuffer): Promise<void>;
-    abortMultipartUploading(contentId: ContentId.Untyped): Promise<ReversibleOperation>;
-    completeMultipartUploading(
-        contentId: ContentId.Untyped,
-        details: AddedContentDetails,
-    ): Promise<ReversibleOperation>;
+    abortMultipartUploading(contentId: ContentId.Untyped): Promise<IReversibleOperation>;
+    completeMultipartUploading(contentId: ContentId.Untyped, details: AddedContentDetails): Promise<void>;
 }
 
 export class CloudflareContentRepository implements ContentRepository {
@@ -152,7 +149,9 @@ export class CloudflareContentRepository implements ContentRepository {
                 .then(xs => xs[0]),
             this.objectStore.get(internalId.internalValue.toString()),
         ]);
-        if (!infoRow || !obj) return undefined;
+        if (!infoRow || !obj) {
+            return undefined;
+        }
 
         return {
             title: infoRow.title,
@@ -173,23 +172,27 @@ export class CloudflareContentAdminRepository
         content: File | ReadableStream,
     ): Promise<ContentId.External> {
         const db = this.connectInfoStore();
-        const [licenseType, licenseText] = License.toDBValues(details.license);
 
-        const [inserted] = await db
-            .insert(schema.details)
-            .values(CloudflareContentAdminRepository.buildInsertRecord(details))
-            .returning({ id: schema.details.id });
+        await using inserted = await ReversibleOperation.perform(
+            async () => {
+                const [inserted] = await db
+                    .insert(schema.details)
+                    .values(CloudflareContentAdminRepository.buildInsertRecord(details))
+                    .returning({ id: schema.details.id });
 
-        try {
-            await this.objectStore.put(inserted.id.toString(), content, {
-                httpMetadata: new Headers({ "Content-Type": contentType }),
-            });
-        } catch (e) {
-            await db.delete(schema.details).where(eq(schema.details.id, inserted.id));
-            throw e;
-        }
+                return inserted;
+            },
+            async inserted => {
+                await db.delete(schema.details).where(eq(schema.details.id, inserted.id));
+            },
+        );
+        await this.objectStore.put(inserted.value.id.toString(), content, {
+            httpMetadata: new Headers({ "Content-Type": contentType }),
+        });
 
-        return new ContentId.Internal(inserted.id).toExternal(this.idObfuscator);
+        const exposingId = new ContentId.Internal(inserted.value.id).toExternal(this.idObfuscator);
+        inserted.neutralize();
+        return exposingId;
     }
 
     async update(
@@ -201,70 +204,87 @@ export class CloudflareContentAdminRepository
         const db = this.connectInfoStore();
         const internalId = id.toInternal(this.idObfuscator).internalValue;
 
-        const [oldContent] = await db
-            .update(schema.details)
-            .set({
-                ...pick(details, "title", "artist", "genre", "comment", "downloadCount"),
-                year: details.dateJst?.getFullYear(),
-                month: _let(details.dateJst?.getMonth(), x => (x === undefined ? undefined : x + 1)),
-                day: details.dateJst?.getDate(),
-                minBPM: details.bpmRange?.min,
-                maxBPM: details.bpmRange?.max,
-                ...(details.license === undefined
-                    ? {}
-                    : _let(License.toDBValues(details.license), ([ty, tx]) => ({ licenseType: ty, licenseText: tx }))),
-            })
-            .where(eq(schema.details.id, internalId))
-            .returning();
+        await using oldContent = await ReversibleOperation.perform(
+            async () => {
+                const [oldContent] = await db
+                    .update(schema.details)
+                    .set({
+                        ...pick(details, "title", "artist", "genre", "comment", "downloadCount"),
+                        year: details.dateJst?.getFullYear(),
+                        month: _let(details.dateJst?.getMonth(), x => (x === undefined ? undefined : x + 1)),
+                        day: details.dateJst?.getDate(),
+                        minBPM: details.bpmRange?.min,
+                        maxBPM: details.bpmRange?.max,
+                        ...(details.license === undefined
+                            ? {}
+                            : _let(License.toDBValues(details.license), ([ty, tx]) => ({
+                                  licenseType: ty,
+                                  licenseText: tx,
+                              }))),
+                    })
+                    .where(eq(schema.details.id, internalId))
+                    .returning();
 
-        try {
-            if (content !== undefined && content !== null) {
-                await this.objectStore.put(id.toString(), content, {
-                    httpMetadata: new Headers({ "Content-Type": contentType! }),
-                });
-            }
-        } catch (e) {
-            await db.update(schema.details).set(oldContent).where(eq(schema.details.id, internalId));
-            throw e;
+                return oldContent;
+            },
+            async oldContent => {
+                await db.update(schema.details).set(oldContent).where(eq(schema.details.id, internalId));
+            },
+        );
+
+        if (content !== undefined && content !== null) {
+            await this.objectStore.put(id.toString(), content, {
+                httpMetadata: new Headers({ "Content-Type": contentType! }),
+            });
         }
+
+        oldContent.neutralize();
     }
 
     async delete(id: ContentId.Untyped): Promise<void> {
         const db = this.connectInfoStore();
 
-        const [recovered] = await db
-            .delete(schema.details)
-            .where(eq(schema.details.id, id.toInternal(this.idObfuscator).internalValue))
-            .returning();
+        await using recovered = await ReversibleOperation.perform(
+            async () => {
+                const [recovered] = await db
+                    .delete(schema.details)
+                    .where(eq(schema.details.id, id.toInternal(this.idObfuscator).internalValue))
+                    .returning();
 
-        try {
-            await this.objectStore.delete(id.toString());
-        } catch (e) {
-            await db.insert(schema.details).values([recovered]);
-            throw e;
-        }
+                return recovered;
+            },
+            async recovered => {
+                await db.insert(schema.details).values([recovered]);
+            },
+        );
+        await this.objectStore.delete(id.toString());
+
+        recovered.neutralize();
     }
 
-    async beginMultipartUploading(contentType: string): Promise<ReversibleOperation<ContentId.External>> {
+    async beginMultipartUploading(contentType: string): Promise<ContentId.External> {
         const db = this.connectInfoStore();
-        const issueContentId = async () => {
-            const [{ id }] = await db
-                .insert(schema.pendingUploads)
-                .values({
-                    r2MultipartKey: "",
-                    r2MultipartUploadId: "",
-                    state: PendingUploadState.toDBValue(PendingUploadState.Ongoing),
-                })
-                .returning({ id: schema.pendingUploads.contentId });
 
-            return new ReversibleOperation(id, async () => {
+        await using id = await ReversibleOperation.perform(
+            async () => {
+                const [{ id }] = await db
+                    .insert(schema.pendingUploads)
+                    .values({
+                        r2MultipartKey: "",
+                        r2MultipartUploadId: "",
+                        state: PendingUploadState.toDBValue(PendingUploadState.Ongoing),
+                    })
+                    .returning({ id: schema.pendingUploads.contentId });
+
+                return id;
+            },
+            async id => {
                 await this.connectInfoStore()
                     .delete(schema.pendingUploads)
                     .where(eq(schema.pendingUploads.contentId, id));
-            });
-        };
+            },
+        );
 
-        await using id = await issueContentId();
         const upload = await this.objectStore.createMultipartUpload(id.value.toString(), {
             httpMetadata: { contentType },
         });
@@ -273,12 +293,15 @@ export class CloudflareContentAdminRepository
             .set({ r2MultipartUploadId: upload.uploadId, r2MultipartKey: upload.key })
             .where(eq(schema.pendingUploads.contentId, id.value));
 
-        return id.moveoutWithValue(new ContentId.Internal(id.value).toExternal(this.idObfuscator));
+        const exposingId = new ContentId.Internal(id.value).toExternal(this.idObfuscator);
+        id.neutralize();
+        return exposingId;
     }
 
     async uploadPart(contentId: ContentId.Untyped, partNumber: number, data: ArrayBuffer): Promise<void> {
         const internalId = contentId.toInternal(this.idObfuscator).internalValue;
         const db = this.connectInfoStore();
+
         const r = await db.query.pendingUploads.findFirst({
             where: eq(schema.pendingUploads.contentId, internalId),
         });
@@ -293,61 +316,67 @@ export class CloudflareContentAdminRepository
         await db.insert(schema.uploadedParts).values({ contentId: internalId, ...part });
     }
 
-    async abortMultipartUploading(contentId: ContentId.Untyped): Promise<ReversibleOperation> {
+    async abortMultipartUploading(contentId: ContentId.Untyped): Promise<IReversibleOperation> {
         const internalId = contentId.toInternal(this.idObfuscator).internalValue;
-        const markAborted = async () => {
-            const [r] = await this.connectInfoStore()
-                .update(schema.pendingUploads)
-                .set({ state: PendingUploadState.toDBValue(PendingUploadState.Ongoing) })
-                .where(eq(schema.pendingUploads.contentId, internalId))
-                .returning();
 
-            return new ReversibleOperation(r, async () => {
+        await using r = await ReversibleOperation.perform(
+            async () => {
+                const [r] = await this.connectInfoStore()
+                    .update(schema.pendingUploads)
+                    .set({ state: PendingUploadState.toDBValue(PendingUploadState.Ongoing) })
+                    .where(eq(schema.pendingUploads.contentId, internalId))
+                    .returning();
+
+                return r;
+            },
+            async r => {
                 await this.connectInfoStore()
                     .update(schema.pendingUploads)
                     .set({ state: r.state })
                     .where(eq(schema.pendingUploads.contentId, internalId));
-            });
-        };
-
-        await using r = await markAborted();
+            },
+        );
         await this.objectStore.resumeMultipartUpload(r.value.r2MultipartKey, r.value.r2MultipartUploadId).abort();
 
         return r.moveoutWithValue(void 0);
     }
 
-    async completeMultipartUploading(
-        contentId: ContentId.Untyped,
-        details: AddedContentDetails,
-    ): Promise<ReversibleOperation> {
+    async completeMultipartUploading(contentId: ContentId.Untyped, details: AddedContentDetails): Promise<void> {
         const internalId = contentId.toInternal(this.idObfuscator).internalValue;
         const db = this.connectInfoStore();
-        const markCompleted = async () => {
-            const [r] = await db
-                .update(schema.pendingUploads)
-                .set({ state: PendingUploadState.toDBValue(PendingUploadState.Completed) })
-                .where(eq(schema.pendingUploads.contentId, internalId))
-                .returning();
 
-            return new ReversibleOperation(r, async () => {
-                await this.connectInfoStore()
-                    .update(schema.pendingUploads)
-                    .set({ state: r.state })
-                    .where(eq(schema.pendingUploads.contentId, internalId));
-            });
-        };
-        const takeParts = async () => {
-            const xs = await db
-                .delete(schema.uploadedParts)
-                .where(eq(schema.uploadedParts.contentId, internalId))
-                .returning();
+        const [keys, parts] = await Promise.all([
+            ReversibleOperation.perform(
+                async () => {
+                    const [r] = await db
+                        .update(schema.pendingUploads)
+                        .set({ state: PendingUploadState.toDBValue(PendingUploadState.Completed) })
+                        .where(eq(schema.pendingUploads.contentId, internalId))
+                        .returning();
 
-            return new ReversibleOperation(xs, async () => {
-                await this.connectInfoStore().insert(schema.uploadedParts).values(xs);
-            });
-        };
+                    return r;
+                },
+                async r => {
+                    await this.connectInfoStore()
+                        .update(schema.pendingUploads)
+                        .set({ state: r.state })
+                        .where(eq(schema.pendingUploads.contentId, internalId));
+                },
+            ),
+            ReversibleOperation.perform(
+                async () => {
+                    const xs = await db
+                        .delete(schema.uploadedParts)
+                        .where(eq(schema.uploadedParts.contentId, internalId))
+                        .returning();
 
-        const [keys, parts] = await Promise.all([markCompleted(), takeParts()]);
+                    return xs;
+                },
+                async xs => {
+                    await this.connectInfoStore().insert(schema.uploadedParts).values(xs);
+                },
+            ),
+        ]);
         await using r = keys.combineDrop(parts);
         await this.objectStore
             .resumeMultipartUpload(keys.value.r2MultipartKey, keys.value.r2MultipartUploadId)
@@ -357,12 +386,7 @@ export class CloudflareContentAdminRepository
             id: internalId,
             ...CloudflareContentAdminRepository.buildInsertRecord(details),
         });
-
-        return r.combineDrop(
-            new ReversibleOperation(undefined, async () => {
-                await this.connectInfoStore().delete(schema.details).where(eq(schema.details.id, internalId));
-            }),
-        );
+        r.neutralize();
     }
 
     private static buildInsertRecord(x: AddedContentDetails): schema.DetailsInsert {

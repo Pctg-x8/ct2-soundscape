@@ -1,12 +1,12 @@
 import Mime from "mime";
 import { ContentId } from "soundscape-shared/src/content/id";
 import { _let } from "soundscape-shared/src/utils";
+import { notFound } from "soundscape-shared/src/utils/genericResponse";
 import { createRepositoryAccess } from "src/repository";
 import * as z from "zod";
-import { notFound } from "~/genericResponse";
 import { type Route } from "./+types/contentDownload";
 
-const ParamsSchema = z.object({ id: ContentId.External.ZodSchema });
+const ParamsSchema = z.object({ id: ContentId.External.ZodPathParamSchema });
 
 export async function loader({ context, params }: Route.LoaderArgs) {
     const paramsTyped = ParamsSchema.safeParse(params);

@@ -46,6 +46,10 @@ export namespace ContentId {
      */
     export class External implements Untyped {
         static readonly ZodSchema = z.int().transform(x => new External(x));
+        static readonly ZodPathParamSchema = z
+            .string()
+            .regex(/^[0-9]+$/)
+            .transform(x => new External(Number(x)));
 
         constructor(readonly value: number) {}
 

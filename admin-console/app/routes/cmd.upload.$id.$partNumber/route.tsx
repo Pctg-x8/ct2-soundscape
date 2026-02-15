@@ -1,21 +1,29 @@
 import { ContentId } from "soundscape-shared/src/content/id";
+import { badRequest } from "soundscape-shared/src/utils/genericResponse";
 import { createRepositoryAccess } from "src/repository";
+import * as z from "zod";
 import { type Route } from "./+types/route";
 
+const ParamsSchema = z.object({
+    id: ContentId.External.ZodPathParamSchema,
+    partNumber: z
+        .string()
+        .regex(/^[0-9]+$/)
+        .transform(Number),
+});
+
 export async function action({ params, request, context }: Route.ActionArgs) {
-    const id = Number(params["id"]);
-    if (!Number.isSafeInteger(id)) {
-        throw new Response("invalid content id", { status: 400 });
-    }
-    const partNumber = Number(params["partNumber"]);
-    if (!Number.isSafeInteger(partNumber)) {
-        throw new Response("invalid part number", { status: 400 });
+    const typedParams = ParamsSchema.safeParse(params);
+    if (!typedParams.success) {
+        console.error("invalid params", typedParams.error);
+        throw badRequest();
     }
 
     await createRepositoryAccess(context.env, context.executionContext).uploadPart(
-        new ContentId.External(id),
-        partNumber,
+        typedParams.data.id,
+        typedParams.data.partNumber,
         await request.arrayBuffer(),
     );
+
     return "";
 }

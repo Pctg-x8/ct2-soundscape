@@ -1,4 +1,5 @@
 import { ContentId } from "soundscape-shared/src/content/id";
+import { badRequest } from "soundscape-shared/src/utils/genericResponse";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
 import { convertLicenseInput } from "src/conversion";
 import { createRepositoryAccess } from "src/repository";
@@ -23,26 +24,30 @@ const AddedContentDetailsSchema = z.object({
 });
 export type CompleteBodyData = Readonly<z.infer<typeof AddedContentDetailsSchema>>;
 
+const ParamsSchema = z.object({ id: ContentId.External.ZodPathParamSchema });
+
 export async function action({ params, context, request }: Route.ActionArgs) {
-    const id = Number(params["id"]);
-    if (!Number.isSafeInteger(id)) {
-        throw new Response("invalid content id", { status: 400 });
+    const typedParams = ParamsSchema.safeParse(params);
+    if (!typedParams.success) {
+        console.error("invalid params", typedParams.error);
+        throw badRequest();
     }
 
-    const details = AddedContentDetailsSchema.parse(await request.json());
-    const license = convertLicenseInput(details);
+    const details = AddedContentDetailsSchema.safeParse(await request.json());
+    if (!details.success) {
+        console.error("invalid body", details.error);
+        throw badRequest();
+    }
 
-    // TODO: 本来はawait usingを使いたい remixがなんか対応してないらしい？？
-    const r = await createRepositoryAccess(context.env, context.executionContext).completeMultipartUploading(
-        new ContentId.External(id),
+    await createRepositoryAccess(context.env, context.executionContext).completeMultipartUploading(
+        typedParams.data.id,
         {
-            ...pick(details, "title", "artist", "genre", "comment"),
-            bpmRange: { min: details.minBPM, max: details.maxBPM },
-            dateJst: new Date(details.year, details.month, details.day),
-            license,
+            ...pick(details.data, "title", "artist", "genre", "comment"),
+            bpmRange: { min: details.data.minBPM, max: details.data.maxBPM },
+            dateJst: new Date(details.data.year, details.data.month - 1, details.data.day),
+            license: convertLicenseInput(details.data),
         },
     );
-    r.neutralize();
 
     return "";
 }

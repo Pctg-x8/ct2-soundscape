@@ -1,15 +1,15 @@
 import { useEffect } from "react";
 import { data, useOutletContext } from "react-router";
 import { ContentId } from "soundscape-shared/src/content/id";
+import { notFound } from "soundscape-shared/src/utils/genericResponse";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
 import { createRepositoryAccess } from "src/repository";
 import * as z from "zod";
 import Player from "~/components/Player";
-import { notFound } from "~/genericResponse";
 import type { Content } from "~/root";
 import { type Route } from "./+types/play";
 
-const ParamsSchema = z.object({ id: ContentId.External.ZodSchema });
+const ParamsSchema = z.object({ id: ContentId.External.ZodPathParamSchema });
 
 export async function loader({ params, context: { env, ctx } }: Route.LoaderArgs) {
     const paramsTyped = ParamsSchema.safeParse(params);

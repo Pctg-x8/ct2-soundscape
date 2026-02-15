@@ -1,10 +1,15 @@
+import { notFound } from "soundscape-shared/src/utils/genericResponse";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
 import { createRepositoryAccess } from "src/repository";
 import * as z from "zod";
-import { notFound } from "~/genericResponse";
 import { type Route } from "./+types/searchByYear";
 
-const ParamsSchema = z.object({ year: z.int() });
+const ParamsSchema = z.object({
+    year: z
+        .string()
+        .regex(/^[0-9]$/)
+        .transform(Number),
+});
 
 export async function loader({ context, params }: Route.LoaderArgs) {
     const paramsTyped = ParamsSchema.safeParse(params);

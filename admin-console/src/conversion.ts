@@ -13,6 +13,6 @@ export function convertLicenseInput(x: { readonly licenseType: number; readonly 
         case 999:
             return x.licenseText;
         default:
-            throw new Error("invalid license input");
+            throw new Error(`invalid license input: ${x.licenseType} ${x.licenseText}`);
     }
 }
