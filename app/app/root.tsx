@@ -1,29 +1,10 @@
-import { cssBundleHref } from "@remix-run/css-bundle";
-import { defer, type HeadersArgs, type LinksFunction, type LoaderFunctionArgs } from "@remix-run/cloudflare";
-import {
-    Await,
-    Link,
-    Links,
-    Meta,
-    Outlet,
-    Scripts,
-    ScrollRestoration,
-    useLoaderData,
-    useMatches,
-} from "@remix-run/react";
 import { Suspense, useMemo, useReducer, useState } from "react";
-import "./root.css";
-import DetailsPane, { type Details } from "./components/DetailsPane";
+import { Await, data, Link, Links, Meta, Outlet, Scripts, ScrollRestoration, useMatches } from "react-router";
 import { _let } from "soundscape-shared/src/utils";
 import { createRepositoryAccess } from "src/repository";
-
-export const links: LinksFunction = () => [
-    {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0",
-    },
-    ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
-];
+import { type Route } from "./+types/root";
+import DetailsPane, { type Details } from "./components/DetailsPane";
+import "./root.css";
 
 export type Content = {
     readonly id: number;
@@ -35,14 +16,14 @@ export type Content = {
     readonly day: number;
 };
 
-export async function loader({ context }: LoaderFunctionArgs) {
-    return defer(
-        { years: createRepositoryAccess(context.env, context.executionContext).yearWithContentCount },
+export async function loader({ context }: Route.LoaderArgs) {
+    return data(
+        { years: createRepositoryAccess(context.env, context.ctx).yearWithContentCount },
         { headers: new Headers({ "Cache-Control": "max-age=3600, must-revalidate" }) }
     );
 }
 
-export function headers({ loaderHeaders }: HeadersArgs) {
+export function headers({ loaderHeaders }: Route.HeadersArgs) {
     return { "Cache-Control": loaderHeaders.get("Cache-Control") };
 }
 
@@ -55,9 +36,7 @@ function contentCreatedAtSortKey(c: Content): number {
     return c.year * 10000 + c.month * 100 + c.day;
 }
 
-export default function App() {
-    const { years } = useLoaderData<typeof loader>();
-
+export default function App({ loaderData: { years } }: Route.ComponentProps) {
     const [details, setDetails] = useState<Promise<Details> | undefined>(undefined);
     const [showPane, setShowPane] = useState(false);
     const [contentGroups, dispatchContentGroupAction] = useReducer(
@@ -109,6 +88,10 @@ export default function App() {
             <head>
                 <meta charSet="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <link
+                    rel="stylesheet"
+                    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0"
+                />
                 <Meta />
                 <Links />
             </head>
@@ -116,7 +99,6 @@ export default function App() {
                 <section id="MainLayout">
                     <section id="Top">
                         <section id="TopScrollContainer">
-                            {/* @ts-expect-error */}
                             <Suspense fallback={<p>Loading...</p>}>
                                 <Await resolve={years}>
                                     {(years) => (
@@ -204,9 +186,8 @@ function ItemList({
                         <span className="groupingValue">{y}</span>
                         <span className="containedCount">{count} items</span>
                     </div>
-                    {contentGroups[y]?.opened ?? false ? (
+                    {(contentGroups[y]?.opened ?? false) ? (
                         <ul>
-                            {/* @ts-expect-error */}
                             <Suspense
                                 fallback={
                                     y in cachedItems

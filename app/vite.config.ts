@@ -1,16 +1,16 @@
 import { defineConfig } from "vite";
-import { vitePlugin as remix, cloudflareDevProxyVitePlugin as remixCloudflareDevProxy } from "@remix-run/dev";
 import tsconfigPaths from "vite-tsconfig-paths";
-import { getLoadContext } from "./load-context";
+import { reactRouter } from "@react-router/dev/vite";
+import { cloudflare } from "@cloudflare/vite-plugin";
 import path from "path";
 
 export default defineConfig({
     plugins: [
-        remixCloudflareDevProxy({
-            getLoadContext,
-            persist: { path: path.resolve(__dirname, "../.wrangler/state/v3") },
+        cloudflare({
+            persistState: { path: path.join(__dirname, "../.wrangler/state") },
+            viteEnvironment: { name: "ssr" },
         }),
-        remix(),
+        reactRouter(),
         tsconfigPaths(),
     ],
 });

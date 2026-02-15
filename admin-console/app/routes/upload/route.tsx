@@ -1,15 +1,13 @@
-import { Form, type MetaDescriptor } from "@remix-run/react";
 import { type FormEvent, useRef, useState } from "react";
-import { readFileMetadata } from "src/contentReader";
-import { License } from "soundscape-shared/src/valueObjects/license";
-import * as zfd from "zod-form-data";
+import { Form } from "react-router";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
-import * as z from "zod";
-import { type CompleteBodyData } from "../cmd.upload.$id.complete/route";
-import { guard } from "src/promiseWrapper";
+import { License } from "soundscape-shared/src/valueObjects/license";
+import { readFileMetadata } from "src/contentReader";
 import { uploadMultiparted } from "src/multipartUploader";
-
-export const meta: MetaDescriptor[] = [{ title: "Uploader - Soundscape (Admin Console)" }];
+import { guard } from "src/promiseWrapper";
+import * as z from "zod";
+import * as zfd from "zod-form-data";
+import { type CompleteBodyData } from "../cmd.upload.$id.complete/route";
 
 type SubmitState =
     | undefined
@@ -118,6 +116,7 @@ export default function Page() {
 
     return (
         <article id="UploadForm">
+            <title>Uploader - Soundscape (Admin Console)</title>
             <h1>ファイルアップロード</h1>
             <Form
                 method="post"

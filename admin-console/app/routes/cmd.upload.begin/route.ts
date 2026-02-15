@@ -1,10 +1,10 @@
-import { json, type ActionFunctionArgs } from "@remix-run/server-runtime";
 import { createRepositoryAccess } from "src/repository";
 import * as z from "zod";
+import { type Route } from "./+types/route";
 
 export const ReturnSchema = z.object({ id: z.number() });
 
-export async function action({ context, request }: ActionFunctionArgs) {
+export async function action({ context, request }: Route.ActionArgs) {
     const contentType = request.headers.get("content-type");
     if (!contentType) {
         throw new Response("content-type is mandatory", { status: 400 });
@@ -16,5 +16,5 @@ export async function action({ context, request }: ActionFunctionArgs) {
     );
     upload.neutralize();
 
-    return json({ id: upload.value.value });
+    return Response.json({ id: upload.value.value });
 }

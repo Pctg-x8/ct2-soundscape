@@ -1,5 +1,5 @@
-import { useFetcher } from "@remix-run/react";
-import type { MouseEventHandler, FormEvent } from "react";
+import type { FormEvent, MouseEventHandler } from "react";
+import { useFetcher } from "react-router";
 import type { NumRange } from "soundscape-shared/src/content";
 import { License } from "soundscape-shared/src/valueObjects/license";
 

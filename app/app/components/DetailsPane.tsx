@@ -1,9 +1,9 @@
-import { Await, Link } from "@remix-run/react";
 import { Suspense } from "react";
+import ReactMarkdown from "react-markdown";
+import { Await, Link } from "react-router";
+import remarkGfm from "remark-gfm";
 import type { NumRange } from "soundscape-shared/src/content";
 import { License } from "soundscape-shared/src/valueObjects/license";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 
 export type Details = {
     readonly id: number;
@@ -30,7 +30,6 @@ export default function DetailsPane({
     return (
         <article id="DetailsPane" className={show ? "show" : undefined}>
             {data ? (
-                /* @ts-expect-error */
                 <Suspense fallback={<p>Loading...</p>}>
                     <Await resolve={data}>{(data) => <Content data={data} />}</Await>
                 </Suspense>

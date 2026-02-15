@@ -1,35 +1,27 @@
+import type { ForwardedRef, MouseEvent } from "react";
+import { Suspense, forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import {
     type ActionFunctionArgs,
-    defer,
-    type LoaderFunctionArgs,
-    type MetaDescriptor,
-    json,
-    unstable_parseMultipartFormData,
-    unstable_createMemoryUploadHandler,
-} from "@remix-run/cloudflare";
-import {
     Await,
-    type ShouldRevalidateFunctionArgs,
-    useLoaderData,
-    useFetcher,
     type FetcherWithComponents,
-} from "@remix-run/react";
-import { Suspense, forwardRef, useCallback, useEffect, useRef, useState } from "react";
-import type { ForwardedRef, MouseEvent } from "react";
-import "./style.css";
-import EntryTable, { type EntryTableRow } from "./EntryTable";
+    type ShouldRevalidateFunctionArgs,
+    useFetcher,
+    useLoaderData,
+} from "react-router";
 import type { ContentDetails } from "soundscape-shared/src/content";
 import { ContentId } from "soundscape-shared/src/content/id";
 import { License } from "soundscape-shared/src/valueObjects/license";
 import * as z from "zod";
+import { type Route } from "./+types/route";
+import EntryTable, { type EntryTableRow } from "./EntryTable";
+import "./style.css";
 
-import * as zfd from "zod-form-data";
+import { FileUpload, parseFormData } from "@remix-run/form-data-parser";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
 import { createRepositoryAccess } from "src/repository";
+import * as zfd from "zod-form-data";
 
-export const meta: MetaDescriptor[] = [{ title: "Content List - Soundscape (Admin Console)" }];
-
-export async function loader({ context }: LoaderFunctionArgs) {
+export async function loader({ context }: Route.LoaderArgs) {
     const items: Promise<EntryTableRow[]> = createRepositoryAccess(
         context.env,
         context.executionContext
@@ -50,7 +42,7 @@ export async function loader({ context }: LoaderFunctionArgs) {
         }))
     );
 
-    return defer({ items });
+    return { items };
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
@@ -61,10 +53,10 @@ export async function action({ request, context }: ActionFunctionArgs) {
     // TODO: 本当はupdateのときのファイル差し替えはストリーミングアップロードしたい
     const values = nonMultipart
         ? await request.formData()
-        : await unstable_parseMultipartFormData(
-              request,
-              unstable_createMemoryUploadHandler({ maxPartSize: 100 * 1024 * 1024 })
-          );
+        : await parseFormData(request, async (upload: FileUpload) => {
+              // TODO: process streaming upload
+              console.dir(upload);
+          });
 
     const inputSchema = zfd.formData({ deleteAction: zfd.numeric().transform((x) => new ContentId.External(x)) }).or(
         zfd.formData({
@@ -89,7 +81,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
     if ("deleteAction" in input) {
         await contentRepository.delete(input.deleteAction);
-        return json({ action: "delete" });
+        return Response.json({ action: "delete" });
     }
 
     if ("fromEditDialog" in input) {
@@ -130,10 +122,10 @@ export async function action({ request, context }: ActionFunctionArgs) {
                 await contentRepository.update(id, newDetails);
             }
 
-            return json({ action: "update" });
+            return Response.json({ action: "update" });
         }
 
-        return json({ action: "update-cancel" });
+        return Response.json({ action: "update-cancel" });
     }
 
     return new Response("unknown action", { status: 400 });
@@ -180,6 +172,7 @@ export default function Page() {
     return (
         // @ts-ignore
         <article style={{ "--maxWidth": "1280px" }}>
+            <title>Content List - Soundscape (Admin Console)</title>
             <h1>登録済み一覧</h1>
             <Suspense fallback={<p>Loading...</p>}>
                 <Await resolve={items}>

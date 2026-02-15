@@ -1,5 +1,5 @@
-import { useNavigation } from "@remix-run/react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
+import { useNavigation } from "react-router";
 import { LocalStorage } from "src/localStorage";
 
 export default function Player({ source, title }: { readonly source?: string; readonly title: string }) {

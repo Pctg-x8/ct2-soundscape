@@ -1,18 +1,19 @@
-import { json, type LoaderFunctionArgs } from "@remix-run/server-runtime";
+import { data } from "react-router";
 import { ContentId } from "soundscape-shared/src/content/id";
-import type { Details } from "~/components/DetailsPane";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
 import { createRepositoryAccess } from "src/repository";
+import type { Details } from "~/components/DetailsPane";
+import { type Route } from "./+types/content.$id.details";
 
 const cacheLength = 60 * 60 * 24 * 30;
 
-export async function loader({ context, params }: LoaderFunctionArgs) {
-    const result = await createRepositoryAccess(context.env, context.executionContext).get(
+export async function loader({ context, params }: Route.LoaderArgs) {
+    const result = await createRepositoryAccess(context.env, context.ctx).get(
         new ContentId.External(Number(params["id"]))
     );
     if (!result) throw new Response("not found", { status: 404 });
 
-    return json(
+    return data(
         {
             id: Number(params["id"]),
             ...pick(result, "title", "artist", "genre", "bpmRange", "comment", "license"),

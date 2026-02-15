@@ -1,9 +1,10 @@
-import { json, type LoaderFunctionArgs } from "@remix-run/server-runtime";
+import { data } from "react-router";
 import { createRepositoryAccess } from "src/repository";
+import { type Route } from "./+types/search.by-year.$year";
 
-export async function loader({ context, params }: LoaderFunctionArgs) {
-    return json(
-        await createRepositoryAccess(context.env, context.executionContext)
+export async function loader({ context, params }: Route.LoaderArgs) {
+    return data(
+        await createRepositoryAccess(context.env, context.ctx)
             .getDetailsByYear(Number(params["year"]))
             .then((xs) =>
                 xs.map((x) => ({

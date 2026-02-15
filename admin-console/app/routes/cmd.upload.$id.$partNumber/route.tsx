@@ -1,8 +1,8 @@
-import { type ActionFunctionArgs } from "@remix-run/server-runtime";
 import { ContentId } from "soundscape-shared/src/content/id";
 import { createRepositoryAccess } from "src/repository";
+import { type Route } from "./+types/route";
 
-export async function action({ params, request, context }: ActionFunctionArgs) {
+export async function action({ params, request, context }: Route.ActionArgs) {
     const id = Number(params["id"]);
     if (!Number.isSafeInteger(id)) {
         throw new Response("invalid content id", { status: 400 });

@@ -1,9 +1,9 @@
-import { type ActionFunctionArgs } from "@remix-run/server-runtime";
 import { ContentId } from "soundscape-shared/src/content/id";
-import { convertLicenseInput } from "src/conversion";
-import * as z from "zod";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
+import { convertLicenseInput } from "src/conversion";
 import { createRepositoryAccess } from "src/repository";
+import * as z from "zod";
+import { type Route } from "./+types/route";
 
 const AddedContentDetailsSchema = z.object({
     title: z.string(),
@@ -23,7 +23,7 @@ const AddedContentDetailsSchema = z.object({
 });
 export type CompleteBodyData = Readonly<z.infer<typeof AddedContentDetailsSchema>>;
 
-export async function action({ params, context, request }: ActionFunctionArgs) {
+export async function action({ params, context, request }: Route.ActionArgs) {
     const id = Number(params["id"]);
     if (!Number.isSafeInteger(id)) {
         throw new Response("invalid content id", { status: 400 });

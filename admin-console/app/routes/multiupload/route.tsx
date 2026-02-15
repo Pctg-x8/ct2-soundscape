@@ -1,15 +1,13 @@
-import { Form, type MetaDescriptor } from "@remix-run/react";
-import { type DragEvent, useEffect, useRef, useState, useCallback, type FormEvent } from "react";
-import { readFileMetadata } from "src/contentReader";
-import { License } from "soundscape-shared/src/valueObjects/license";
-import * as zfd from "zod-form-data";
-import * as z from "zod";
+import { useCallback, useEffect, useRef, useState, type DragEvent, type FormEvent } from "react";
+import { Form } from "react-router";
 import { pick } from "soundscape-shared/src/utils/typeImpl";
-import { type CompleteBodyData } from "../cmd.upload.$id.complete/route";
-import { guard } from "src/promiseWrapper";
+import { License } from "soundscape-shared/src/valueObjects/license";
+import { readFileMetadata } from "src/contentReader";
 import { uploadMultiparted } from "src/multipartUploader";
-
-export const meta: MetaDescriptor[] = [{ title: "Multiple Uploader - Soundscape (Admin Console)" }];
+import { guard } from "src/promiseWrapper";
+import * as z from "zod";
+import * as zfd from "zod-form-data";
+import { type CompleteBodyData } from "../cmd.upload.$id.complete/route";
 
 type SubmitState =
     | undefined
@@ -108,6 +106,7 @@ export default function Page() {
 
     return (
         <article>
+            <title>Multiple Uploader - Soundscape (Admin Console)</title>
             <h1>複数ファイルアップロード</h1>
             <section id="MultiUploadDropArea" onDragOver={onDragOver} onDrop={onDropFiles}>
                 ここにファイルをドロップ

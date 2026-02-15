@@ -1,15 +1,7 @@
-import { cssBundleHref } from "@remix-run/css-bundle";
-import type { LinksFunction } from "@remix-run/cloudflare";
-import { Link, Links, Meta, Outlet, Scripts, ScrollRestoration } from "@remix-run/react";
+import { Link, Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
 
-import "./index.css";
 import "./form.css";
-
-export const links: LinksFunction = () => [
-    { rel: "preconnect", href: "https://rsms.me/" },
-    { rel: "stylesheet", href: "https://rsms.me/inter/inter.css" },
-    ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
-];
+import "./index.css";
 
 export default function App() {
     return (
@@ -17,6 +9,8 @@ export default function App() {
             <head>
                 <meta charSet="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <link rel="preconnect" href="https://rsms.me/" />
+                <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
                 <Meta />
                 <Links />
             </head>
