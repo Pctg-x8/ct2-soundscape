@@ -1,8 +1,6 @@
 {
-  "version": "5",
+  "version": "6",
   "dialect": "sqlite",
-  "id": "514d3db7-6430-499d-8db8-25c12164a5aa",
-  "prevId": "df1d6260-2c66-463c-b17d-acb97357c1a1",
   "tables": {
     "details": {
       "name": "details",
@@ -99,13 +97,16 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     }
   },
   "enums": {},
   "_meta": {
-    "schemas": {},
     "tables": {},
     "columns": {}
-  }
+  },
+  "id": "514d3db7-6430-499d-8db8-25c12164a5aa",
+  "prevId": "df1d6260-2c66-463c-b17d-acb97357c1a1",
+  "views": {}
 }

@@ -1,8 +1,6 @@
 {
-  "version": "5",
+  "version": "6",
   "dialect": "sqlite",
-  "id": "3b692790-b4f4-4997-8874-53381d206019",
-  "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "details": {
       "name": "details",
@@ -42,9 +40,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": {
-            "value": 0
-          }
+          "default": "'{\"value\":0}'"
         },
         "download_count": {
           "name": "download_count",
@@ -58,13 +54,16 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     }
   },
   "enums": {},
   "_meta": {
-    "schemas": {},
     "tables": {},
     "columns": {}
-  }
+  },
+  "id": "3b692790-b4f4-4997-8874-53381d206019",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "views": {}
 }

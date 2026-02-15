@@ -7,7 +7,8 @@
     "license": "ISC",
     "dependencies": {
         "@cloudflare/workers-types": "^4",
-        "aws4fetch": "^1"
+        "aws4fetch": "^1",
+        "drizzle-orm": "^0.45.1"
     },
     "devDependencies": {
         "@types/eslint-plugin-jsx-a11y": "^6.10",
@@ -23,7 +24,8 @@
         "typescript": "^5",
         "typescript-eslint": "^8",
         "vite-tsconfig-paths": "^6",
-        "wrangler": "^4"
+        "wrangler": "^4",
+        "drizzle-kit": "^0.31.9"
     },
     "workspaces": [
         "app",
