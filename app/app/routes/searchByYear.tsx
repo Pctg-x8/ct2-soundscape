@@ -7,7 +7,7 @@ import { type Route } from "./+types/searchByYear";
 const ParamsSchema = z.object({
     year: z
         .string()
-        .regex(/^[0-9]$/)
+        .regex(/^[0-9]+$/)
         .transform(Number),
 });
 
