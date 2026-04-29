@@ -46,9 +46,9 @@ export async function loader({ context }: Route.LoaderArgs) {
     return { items };
 }
 
-const DeleteActionInputSchema = zfd.formData({ deleteAction: ContentId.External.ZodSchema });
+const DeleteActionInputSchema = zfd.formData({ deleteAction: ContentId.External.ZodFormInputSchema });
 const ModifyActionInputSchema = zfd.formData({
-    fromEditDialog: zfd.text(z.enum(["cancel"])).or(ContentId.External.ZodSchema),
+    fromEditDialog: zfd.text(z.enum(["cancel"])).or(ContentId.External.ZodFormInputSchema),
     title: zfd.text(),
     artist: zfd.text(),
     genre: zfd.text(),
